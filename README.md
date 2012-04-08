@@ -8,7 +8,120 @@ Django Serializers
 Overview
 ========
 
-**TODO**
+django-serializers provides flexible serialization of objects, models and
+querysets.
+
+It is intended to be a potential replacement for the current, inflexible
+serialization.  It should be able to support the current `dumpdata` format,
+whilst also being easy to override and customise.
+
+* Serializers are declared in a simlar format to `Form` and `Model` declarations.
+* Declaration of the structure to serialize into is independant of the encoding 
+  eg. json, yaml, xml. that is used to produce the final output.
+* Arbitrary python objects may be serialized using the `Serializer` class,
+  Model instances and querysets may be serialized using the `ModelSerializer` class.
+
+django-serializers intentionally does not address deserialization, as it is
+out of scope.
+
+Serializer options
+==================
+
+Serializer options may be specified in the class definition, on the `Meta`
+inner class, or set when instatiating the `Serializer` object.
+
+For example, using the `Meta` inner class:
+
+    class PersonSerializer(Serializer):
+        class Meta:
+            fields = ('full_name', 'age')
+
+    PersonSerializer().serialize(person)
+
+And the same, using arguments when instantiating the serializer.
+
+    person_serializer = Serializer(fields=('full_name', 'age'))
+    person_serializer.serialize(person)
+
+
+include
+-------
+
+A list of field names that should be included in the output.  This could
+include properties, class attributes, or any other attribute on the object that
+would not otherwise be serialized.
+Any FieldSerializers defined on the class will automatically be added to the
+list of included fields.
+
+For example:
+
+    class Person(object):
+        def __init__(self, first_name, last_name, age, **kwargs):
+            self.first_name = first_name
+            self.last_name = last_name
+            self.age = age
+
+        @property
+        def full_name(self):
+            return self.first_name + ' ' + self.last_name
+
+    class CustomSerializer(Serializer):
+        class Meta:
+            include = ('full_name',)
+
+    CustomSerializer().serialize(Person('john', 'doe', 42))
+    {
+        'full_name': 'john doe',
+        'first_name': 'john',
+        'last_name': 'doe',
+        'age': 42
+    }
+
+exclude
+-------
+
+A list of field names that should not be included in the output.
+
+fields
+------
+
+The complete list of field names that should be serialized.  If provided
+`fields` will override `include` and `exclude`.
+
+label
+-----
+
+The `label` option is only relevant if the serializer is used as a field
+serializer.  If `label` is set it is used determines the as the key when
+serializing the field.
+
+For example:
+
+    class CustomSerializer(Serializer):
+        full_name = FieldSerializer(label='Full name')
+        age = FieldSerializer(label='Age')
+        class Meta:
+            fields = ('full_name', 'age')
+
+    CustomSerializer().serialize(Person('john', 'doe', 42))
+    {
+        'Full name': 'john doe',
+        'Age': 42
+    }
+
+serialize
+---------
+
+Provides an simple way to specify the serialization function for a field.
+`serialize` should be a function that takes a single argument and returns
+the serialized output.
+
+TODO
+====
+
+* Depth
+* Recursion
+* Cyclical serialization declarations
 
 Installation
 ============
