@@ -12,6 +12,7 @@ package = 'serializers'
 description = 'Customizable serialization for Django'
 url = 'http://github.com/tomchristie/django-serializers'
 author = 'Tom Christie'
+author_email = 'tom@tomchristie.com'
 license = 'BSD'
 install_requires = []
 
@@ -57,7 +58,6 @@ if sys.argv[-1] == 'publish':
     print "  git push --tags"
     sys.exit()
 
-
 setup(
     name=name,
     version=get_version(package),
@@ -65,6 +65,7 @@ setup(
     license=license,
     description=description,
     author=author,
+    author_email=author_email,
     packages=get_packages(package),
     package_data=get_package_data(package),
     install_requires=install_requires

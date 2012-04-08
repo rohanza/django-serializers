@@ -1,66 +1,34 @@
-Django Reusable Apps
-====================
+Django Serializers
+==================
 
-**Simple template for reusable apps with Django.**
+**Customizable Serialization for Django.**
 
 **Author:** Tom Christie, [@_tomchristie][1].
 
 Overview
 ========
 
-A simple template for creating reusable apps with Django.
+**TODO**
 
-Includes:
+Installation
+============
 
-1. A `setup.py` that makes your life easy and doesn't suck.
-2. A simple layout that lets you run the app's tests without installing it into an existing project.
-3. A `tox` config to allow you to run your tests against multiple environments.
+Install using pip:
 
-Creating a new app
-==================
-
-You'll want to clone this project, then create a fresh git repo for it:
-
-    git clone git://github.com/dabapps/django-reusable-app.git my-project-name
-    cd my-project-name
-    mv myproject packagename
-    rm -rf .git
-    git init
-
-Edit `manage.py` and change the default `DJANGO_SETTINGS_MODULE` to
-`packagename.testsettings`.
-
-Edit `setup.py` and update the settings at the top of the file.
-
-Pushing releases to PyPI
-========================
-
-To register your package on PyPI:
-
-    ./setup.py register
-
-To publish a new version of your app to PyPI, set the `__version__` string in
-your package's `__init__.py`, then run:
-
-    ./setup.py publish
+    pip install django-serializers
 
 Running the tests
 =================
 
-To run the tests against the current environment:
+If you have cloned the git repo you can run the tests directly, otherwise
+you'll need to add the 'serialize' app to an existing project:
 
     ./manage.py test
-
-To run the tests against multiple environments, install `tox` using
-`pip install tox`, make sure you're not currently in a virtual environment,
-then simply run `tox`:
-
-    tox
 
 Changelog
 =========
 
-1.0.0
+0.1.0
 -----
 
 * Initial release
@@ -68,7 +36,7 @@ Changelog
 License
 =======
 
-Copyright © DabApps.
+Copyright © Tom Christie.
 
 All rights reserved.
 
