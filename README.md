@@ -204,6 +204,13 @@ The `label` option is only relevant if the serializer is used as a field
 serializer.  If `label` is set it is used determines the as the key when
 serializing the field.
 
+include_default_fields
+----------------------
+
+If `include_default_fields` is set to `False`, instance attributes on the object will not be included by default.
+
+This means that only fields which have been explicitly included via a `FieldSerializer` declaration, or via the `include` or `fields` options will be included.
+
 serialize
 ---------
 
@@ -240,7 +247,7 @@ Any declared `FieldSerializer` classes are automatically added to the list of at
 Serializer methods
 ==================
 
-encode(obj, format=None, **opts)
+encode(self, obj, format=None, **opts)
 --------------------------------
 
 The main entry point into serializers.
@@ -251,23 +258,23 @@ The main entry point into serializers.
 
 Internally serialization is a two-step process.  The first step serializes the object into the desired structure, limited to a set of primative python datatypes.  The second step renders that structure into the final output string or bytestream.
 
-serialize(obj)
---------------
+serialize(self, obj)
+--------------------
 
 Returns a native python datatype representing the given object.
 
 If you are writing a custom field serializer, overiding `serialize()` will let you customise how the output is generated.
 
-serialize_field_name(obj, field_name)
--------------------------------------
+serialize_field_name(self, obj, field_name)
+-------------------------------------------
 
 Returns a native python object representing the key for the given field name.
 By default this will be the serializer's `label` if it has one specified,
 or the `field_name` string otherwise.
 
 
-serialize_field_value(obj, field_name)
---------------------------------------
+serialize_field_value(self, obj, field_name)
+--------------------------------------------
 
 Returns a native python datatype representing the value for the given field name.
 
@@ -277,32 +284,32 @@ For a `Serializer` this will default to call `serialize()` on the entire object.
 
 If you are writing a custom `FieldSerializer` and need to control exactly which attributes of the object are serialized, you will need to override `serialize_field_value()`.  (For example if you are writing a `datetime` serializer which combines information from two seperate `date` and `time` attributes on an object.)
 
-get_field_names(obj)
---------------------
+get_field_names(self, obj)
+--------------------------
+
+Return the entire set of field names that should be serialized for an object.
+By default this method takes into account the set of fields returned by `get_object_field_names()`, plus any explicitly declared `FieldSerializer` classes, as well as the `include`, `exclude`, and `fields` options.
+
+get_default_field_names(self, obj)
+----------------------------------
 
 Return the set of field names that should be serialized for an object.
-By default this method takes into account the set of fields returned by `get_default_field_names()`, plus any explicitly declared `FieldSerializer` classes, as well as the `include`, `exclude`, and `fields` options.
+If a serializer has no `FieldSerializer` classes declared, and nothing set for the `include`, `exclude` and `fields` options, then this will be the set of fields names that will be serialized.
 
-get_default_field_names(obj)
-----------------------------
-
-Return the set of default field names that should be serialized for an object.
-If a serializer has no `FieldSerializer` classes declared, and nothing set for the `include`, `exclude` and `fields` options, then this will be the 
-
-get_field_serializer(obj, field_name)
--------------------------------------
+get_field_serializer(self, obj, field_name)
+-------------------------------------------
 
 Returns the serializer instance that should be used for a field.
 By default this checks to see if there is an explicitly defined `FieldSerializer`
 for the given name, and if not, falls back to `get_default_field_serializer`.
 
-get_default_field_serializer(obj, field_name)
----------------------------------------------
+get_default_field_serializer(self, obj, field_name)
+---------------------------------------------------
 
 Returns the serializer instance that should be used for a field if there was no explicitly declared `FieldSerializer` class for the given `field_name`.
 
-render(data, format, **opts)
-----------------------------
+render(self, data, format, **opts)
+----------------------------------
 
 Performs the final part of the serialization, translating a simple python object into the output format.
 

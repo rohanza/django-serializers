@@ -11,6 +11,7 @@ class Serializer(object):
         include = ()
         exclude = ()
         fields = ()
+        include_default_fields = True
 
     renderer_classes = {
         'xml': XMLRenderer,
@@ -18,13 +19,18 @@ class Serializer(object):
         'yaml': YAMLRenderer
     }
 
-    def __init__(self, include=None, exclude=None, fields=None, label=None, serialize=None):
+    def __init__(self, include=None, exclude=None, fields=None,
+                 include_default_fields=None, label=None, serialize=None):
         if serialize:
             self.serialize = serialize
         self.label = label or getattr(self.Meta, 'label', None)
         self.include = include or getattr(self.Meta, 'include', ())
         self.exclude = exclude or getattr(self.Meta, 'exclude', ())
         self.fields = fields or getattr(self.Meta, 'fields', ())
+        self.include_default_fields = (
+            include_default_fields or
+            getattr(self.Meta, 'include_default_fields', True)
+        )
 
     def is_protected_type(self, obj):
         """
@@ -48,26 +54,35 @@ class Serializer(object):
             (inspect.ismethod(obj) and len(inspect.getargspec(obj)[0]) <= 1)
         )
 
+    def get_field_serializer_names(self):
+        """
+        Returns the set of all field names for explicitly declared
+        FieldSerializers on this class.
+        """
+        return  [key for key, val in self.__class__.__dict__.items()
+                 if hasattr(val, 'serialize_field_name') and
+                    hasattr(val, 'serialize_field_value')]
+
     def get_field_names(self, obj):
         """
-        Given an object, return the set of fields to serialize.
+        Given an object, return the set of field names to serialize.
         """
         if self.fields:
             return self.fields
         else:
-            defaults = self.get_default_field_names(obj)
-            return list(set(self.include) | set(defaults) - set(self.exclude))
+            include = set(self.include)
+            include |= set(self.get_field_serializer_names())
+            if self.include_default_fields:
+                include |= set(self.get_default_field_names(obj))
+            return list(include - set(self.exclude))
 
     def get_default_field_names(self, obj):
         """
-        Given an object, return the default set of fields to serialize.
+        Given an object, return the default set of field names to serialize.
+        This is what would be serialized if no explicit `FieldSerializer`
+        are declared, and `include`, `exclude` and `fields` are not set.
         """
-        instance_attributes = [key for key in obj.__dict__.keys()
-                               if not(key.startswith('_'))]
-        explicit_fields = [key for key, val in self.__class__.__dict__.items()
-                           if hasattr(val, 'serialize_field_name') and
-                              hasattr(val, 'serialize_field_value')]
-        return list(set(instance_attributes) | set(explicit_fields))
+        return [key for key in obj.__dict__.keys() if not(key.startswith('_'))]
 
     def get_field_serializer(self, obj, field_name):
         """

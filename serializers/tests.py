@@ -227,6 +227,24 @@ class SerializerFieldTests(TestCase):
 
         self.assertEquals(CustomSerializer().serialize(self.obj), expected)
 
+    def test_include_default_fields(self):
+        """
+        If `include_default_fields` is set to `False`, only fields which
+        have been explicitly included via a `FieldSerializer` declaration,
+        or via the `include` or `fields` options will be included.
+        """
+        class CustomSerializer(Serializer):
+            full_name = FieldSerializer()
+
+            class Meta:
+                include_default_fields = False
+
+        expected = {
+            'full_name': 'john doe',
+        }
+
+        self.assertEquals(CustomSerializer().serialize(self.obj), expected)
+
     def test_field_label(self):
         """
         A serializer field can take a 'label' argument, which is used as the
