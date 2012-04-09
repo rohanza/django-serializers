@@ -300,7 +300,7 @@ get_field_names(self, obj)
 --------------------------
 
 Return the entire set of field names that should be serialized for an object.
-By default this method takes into account the set of fields returned by `get_object_field_names()`, plus any explicitly declared `FieldSerializer` classes, as well as the `include`, `exclude`, and `fields` options.
+By default this method takes into account the set of fields returned by `get_default_field_names()`, plus any explicitly declared `FieldSerializer` classes, as well as the `include`, `exclude`, and `fields` options.
 
 get_default_field_names(self, obj)
 ----------------------------------
