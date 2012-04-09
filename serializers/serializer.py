@@ -32,28 +32,6 @@ class Serializer(object):
             getattr(self.Meta, 'include_default_fields', True)
         )
 
-    def is_protected_type(self, obj):
-        """
-        True if the object is a native datatype that does not need to
-        be serialized.
-        """
-        return isinstance(obj, (
-            types.NoneType,
-            int, long,
-            datetime.datetime, datetime.date, datetime.time,
-            float, Decimal,
-            basestring)
-        )
-
-    def is_simple_callable(self, obj):
-        """
-        True if the object is a callable that takes no arguments.
-        """
-        return (
-            (inspect.isfunction(obj) and not inspect.getargspec(obj)[0]) or
-            (inspect.ismethod(obj) and len(inspect.getargspec(obj)[0]) <= 1)
-        )
-
     def get_field_serializer_names(self):
         """
         Returns the set of all field names for explicitly declared
@@ -82,6 +60,8 @@ class Serializer(object):
         This is what would be serialized if no explicit `FieldSerializer`
         are declared, and `include`, `exclude` and `fields` are not set.
         """
+        if hasattr(obj, 'keys'):
+            return obj.keys()
         return [key for key in obj.__dict__.keys() if not(key.startswith('_'))]
 
     def get_field_serializer(self, obj, field_name):
@@ -116,27 +96,10 @@ class Serializer(object):
             ret[key] = value
         return ret
 
-    def serialize_dict(self, obj):
-        return dict([(self.serialize(key), self.serialize(obj[key]))
-                      for key in obj.keys()])
-
-    def serialize_iterable(self, obj):
-        return [self.serialize(item) for item in obj]
-
-    def serialize_callable(self, obj):
-        return self.serialize(obj())
-
     def serialize(self, obj):
-        if self.is_protected_type(obj):
-            return obj
-        elif hasattr(obj, 'keys'):
-            return self.serialize_dict(obj)
-        elif hasattr(obj, '__iter__'):
-            return self.serialize_iterable(obj)
-        elif self.is_simple_callable(obj):
-            return self.serialize_callable(obj)
-        else:
-            return self.serialize_object(obj)
+        if hasattr(obj, '__iter__'):
+            return [self.serialize_object(item) for item in obj]
+        return self.serialize_object(obj)
 
     def encode(self, obj, format=None, **opts):
         data = self.serialize(obj)
@@ -153,7 +116,34 @@ class FieldSerializer(Serializer):
     def serialize_field_value(self, obj, field_name):
         return self.serialize(getattr(obj, field_name))
 
+    def serialize(self, obj):
+        if self._is_protected_type(obj):
+            return obj
+        elif self._is_simple_callable(obj):
+            return self.serialize(obj())
+        return super(FieldSerializer, self).serialize(obj)
 
+    def _is_protected_type(self, obj):
+        """
+        True if the object is a native datatype that does not need to
+        be serialized.
+        """
+        return isinstance(obj, (
+            types.NoneType,
+            int, long,
+            datetime.datetime, datetime.date, datetime.time,
+            float, Decimal,
+            basestring)
+        )
+
+    def _is_simple_callable(self, obj):
+        """
+        True if the object is a callable that takes no arguments.
+        """
+        return (
+            (inspect.isfunction(obj) and not inspect.getargspec(obj)[0]) or
+            (inspect.ismethod(obj) and len(inspect.getargspec(obj)[0]) <= 1)
+        )
 
 # class ObjectSerializer(Serializer):
 #     pass
