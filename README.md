@@ -211,12 +211,27 @@ If `include_default_fields` is set to `False`, instance attributes on the object
 
 This means that only fields which have been explicitly included via a `FieldSerializer` declaration, or via the `include` or `fields` options will be included.
 
+For example:
+
+    class CustomSerializer(Serializer):
+        full_name = FieldSerializer(label='Full name')
+        age = FieldSerializer(label='Age')
+        
+        class Meta:
+            include_default_fields = False  # Only 'full_name' and 'age' will be serialized
+
 serialize
 ---------
 
 Provides an simple way to specify the serialization function for a field.
 `serialize` should be a function that takes a single argument and returns
 the serialized output.
+
+For example:
+
+    class CustomSerializer(Serializer):
+        email = FieldSerializer(serialize=lamda obj: obj.lower())  # Force email fields to lowercase.
+        ...
 
 FieldSerializer declarations
 ============================
@@ -229,17 +244,14 @@ For instance:
         full_name = FieldSerializer(label='Full name')
         age = FieldSerializer(label='Age')
 
-        class Meta:
-            fields = ('full_name', 'age')
-
-The `Serializer` class itself provides the `FieldSerializer` interface, so may be used in the same way:
+The `Serializer` class itself provides the `FieldSerializer` interface, so may be used in the same way, to nest a serialzation of the complete objet inside a field:
 
     class CustomSerializer(object):
         full_name = FieldSerializer(label='Full name')
         details = Serializer()
 
         class Meta:
-            fields = ('full_name', 'details')
+            include_default_fields = False
 
 Any declared `FieldSerializer` classes are automatically added to the list of attributes that should be included on the output.  (See also the `include` option.)  By default the full list of fields to serialize will be the list of all the instance attributes set on the model, plus all the explictly declared `FieldSerializer` classes.
 
