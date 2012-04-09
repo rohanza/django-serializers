@@ -60,7 +60,7 @@ We'll use the following example class to show some simple example of serializati
         def full_name(self):
             return self.first_name + ' ' + self.last_name
 
-You can serialize arbitrary objects using the `Serializer` class.  Objects are serialized into dictionaries, containing key value pairs of any instance attributes on the object:
+You can serialize arbitrary objects using the `Serializer` class.  Objects are serialized into dictionaries, containing key value pairs of any non-private instance attributes on the object:
 
     >>> from serializers import Serializer
     >>> person = Person('john', 'doe', 42)
@@ -256,6 +256,8 @@ serialize(obj)
 
 Returns a native python datatype representing the given object.
 
+If you are writing a custom field serializer, overiding `serialize()` will let you customise how the output is generated.
+
 serialize_field_name(obj, field_name)
 -------------------------------------
 
@@ -272,6 +274,20 @@ Returns a native python datatype representing the value for the given field name
 For a `FieldSerializer` this will default to calling `serialize()` on the attribute given by `getattr(obj, fieldname)`, which means it will serialize only the given field.
 
 For a `Serializer` this will default to call `serialize()` on the entire object.
+
+If you are writing a custom `FieldSerializer` and need to control exactly which attributes of the object are serialized, you will need to override `serialize_field_value()`.  (For example if you are writing a `datetime` serializer which combines information from two seperate `date` and `time` attributes on an object.)
+
+get_field_names(obj)
+--------------------
+
+Return the set of field names that should be serialized for an object.
+By default this method takes into account the set of fields returned by `get_default_field_names()`, plus any explicitly declared `FieldSerializer` classes, as well as the `include`, `exclude`, and `fields` options.
+
+get_default_field_names(obj)
+----------------------------
+
+Return the set of default field names that should be serialized for an object.
+If a serializer has no `FieldSerializer` classes declared, and nothing set for the `include`, `exclude` and `fields` options, then this will be the 
 
 get_field_serializer(obj, field_name)
 -------------------------------------

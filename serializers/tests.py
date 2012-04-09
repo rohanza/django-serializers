@@ -210,6 +210,23 @@ class SerializerFieldTests(TestCase):
     def setUp(self):
         self.obj = Person('john', 'doe', 42)
 
+    def test_fields_added_as_include(self):
+        """
+        Declaring a FieldSerializer adds it to the set of fields that are
+        serialized by default.
+        """
+        class CustomSerializer(Serializer):
+            full_name = FieldSerializer()
+
+        expected = {
+            'full_name': 'john doe',
+            'first_name': 'john',
+            'last_name': 'doe',
+            'age': 42
+        }
+
+        self.assertEquals(CustomSerializer().serialize(self.obj), expected)
+
     def test_field_label(self):
         """
         A serializer field can take a 'label' argument, which is used as the

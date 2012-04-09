@@ -48,13 +48,6 @@ class Serializer(object):
             (inspect.ismethod(obj) and len(inspect.getargspec(obj)[0]) <= 1)
         )
 
-    def get_default_field_names(self, obj):
-        """
-        Given an object, return the default set of fields to serialize.
-        """
-        return [key for key in obj.__dict__.keys()
-                if not(key.startswith('_'))]
-
     def get_field_names(self, obj):
         """
         Given an object, return the set of fields to serialize.
@@ -65,12 +58,33 @@ class Serializer(object):
             defaults = self.get_default_field_names(obj)
             return list(set(self.include) | set(defaults) - set(self.exclude))
 
+    def get_default_field_names(self, obj):
+        """
+        Given an object, return the default set of fields to serialize.
+        """
+        instance_attributes = [key for key in obj.__dict__.keys()
+                               if not(key.startswith('_'))]
+        explicit_fields = [key for key, val in self.__class__.__dict__.items()
+                           if hasattr(val, 'serialize_field_name') and
+                              hasattr(val, 'serialize_field_value')]
+        return list(set(instance_attributes) | set(explicit_fields))
+
     def get_field_serializer(self, obj, field_name):
         """
         Given an object and a field name, return the serializer instance that
         should be used to serialize that field.
         """
-        return getattr(self, field_name, FieldSerializer())
+        try:
+            return getattr(self, field_name)
+        except AttributeError:
+            return self.get_default_field_serializer(obj, field_name)
+
+    def get_default_field_serializer(self, obj, field_name):
+        """
+        If a field does not have an explicitly declared serializer, return the
+        default serializer that should be used for that field.
+        """
+        return FieldSerializer()
 
     def serialize_field_name(self, obj, field_name):
         return self.label or field_name
