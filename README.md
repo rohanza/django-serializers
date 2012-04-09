@@ -3,7 +3,7 @@ Django Serializers
 
 **Customizable Serialization for Django.**
 
-**Author:** Tom Christie, [@_tomchristie][1].
+**Author:** Tom Christie, [Follow me on Twitter][1].
 
 Overview
 ========
@@ -48,7 +48,7 @@ Note that if you have cloned the git repo you can run the tests directly, with t
 Quick Start
 ===========
 
-We'll use the following example class to show some simple example of serialization:
+We'll use the following example class to show some simple examples of serialization:
 
     class Person(object):
         def __init__(self, first_name, last_name, age):
@@ -71,7 +71,7 @@ You can serialize arbitrary objects using the `Serializer` class.  Objects are s
         'last_name': 'doe',
         'age': 42
     }
-    
+
 Let's say we only want to include some specific fields.  We can do so either by setting those fields when we instantiate the `Serializer`...
 
     >>> serializer = Serializer(fields=('first_name', 'age'))
@@ -93,7 +93,7 @@ Let's say we only want to include some specific fields.  We can do so either by 
         'age': 42
     }
 
-We can also include additional attributes on the object to be serialized:
+We can also include additional attributes on the object to be serialized, or exclude existing attributes:
 
     >>> class PersonSerializer(Serializer):
     >>>     class Meta:
@@ -106,7 +106,7 @@ We can also include additional attributes on the object to be serialized:
         'age': 42
     }
 
-Redefine how existing fields should be serialized:
+We can also explicitly define how existing fields should be serialized:
 
     >>> class PersonSerializer(Serializer):
     >>>    first_name = FieldSerializer(label='First name')
@@ -120,7 +120,7 @@ Redefine how existing fields should be serialized:
         'Last name': 'doe'
     }
 
-Add new fields to be serialized:
+Or we can add new fields to be serialized:
 
     >>> class PersonSerializer(Serializer):
     >>>    proper_name = FieldSerializer(serialize=lambda obj: 'Mr' + obj.proper())
@@ -133,7 +133,7 @@ Add new fields to be serialized:
         'age': 42
     }
 
-Or define new field classes, which we can reuse in different serializers:
+We can also define new types of field and control how they are serialized:
 
     >>> class ClassNameField(FieldSerializer):
     >>>     def serialize_field_value(self, obj, field_name)
@@ -260,7 +260,7 @@ Serializer methods
 ==================
 
 encode(self, obj, format=None, **opts)
---------------------------------
+--------------------------------------
 
 The main entry point into serializers.
 
@@ -268,7 +268,7 @@ The main entry point into serializers.
 
 `opts` may be any additional options specific to the encoding.
 
-Internally serialization is a two-step process.  The first step serializes the object into the desired structure, limited to a set of primative python datatypes.  The second step renders that structure into the final output string or bytestream.
+Internally serialization is a two-step process.  The first step calls the `serialize()` method, which serializes the object into the desired structure, limited to a set of primative python datatypes.  The second step calls the `render()` method, which renders that structure into the final output string or bytestream.
 
 serialize(self, obj)
 --------------------
@@ -313,7 +313,7 @@ get_field_serializer(self, obj, field_name)
 
 Returns the serializer instance that should be used for a field.
 By default this checks to see if there is an explicitly defined `FieldSerializer`
-for the given name, and if not, falls back to `get_default_field_serializer`.
+for the given field name, and if not, falls back to `get_default_field_serializer`.
 
 get_default_field_serializer(self, obj, field_name)
 ---------------------------------------------------
