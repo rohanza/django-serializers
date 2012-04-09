@@ -2,6 +2,7 @@ from decimal import Decimal
 import datetime
 import inspect
 import types
+from serializers.renderers import (JSONRenderer, YAMLRenderer, XMLRenderer)
 
 
 class Serializer(object):
@@ -10,6 +11,12 @@ class Serializer(object):
         include = ()
         exclude = ()
         fields = ()
+
+    renderer_classes = {
+        'xml': XMLRenderer,
+        'json': JSONRenderer,
+        'yaml': YAMLRenderer
+    }
 
     def __init__(self, include=None, exclude=None, fields=None, label=None, serialize=None):
         if serialize:
@@ -101,6 +108,16 @@ class Serializer(object):
             return self.serialize_callable(obj)
         else:
             return self.serialize_object(obj)
+
+    def encode(self, obj, format=None, **opts):
+        data = self.serialize(obj)
+        if format:
+            return self.render(data, format, **opts)
+        return data
+
+    def render(self, data, format, **opts):
+        renderer = self.renderer_classes[format]()
+        return renderer.render(data, **opts)
 
 
 class FieldSerializer(Serializer):

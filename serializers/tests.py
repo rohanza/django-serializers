@@ -1,5 +1,5 @@
 from django.test import TestCase
-from serializer import Serializer, FieldSerializer
+from serializers import Serializer, FieldSerializer
 
 
 class ExampleObject(object):
@@ -32,6 +32,26 @@ class Person(object):
 
     def is_child(self):
         return self.age < self.CHILD_AGE
+
+
+class EncoderTests(TestCase):
+    def setUp(self):
+        self.obj = ExampleObject()
+
+    def test_json(self):
+        expected = '{"a": 1, "b": "foo", "c": true}'
+        output = Serializer().encode(self.obj, 'json', sort_keys=True)
+        self.assertEquals(output, expected)
+
+    def test_yaml(self):
+        expected = '{a: 1, b: foo, c: true}\n'
+        output = Serializer().encode(self.obj, 'yaml')
+        self.assertEquals(output, expected)
+
+    def test_xml(self):
+        expected = '<?xml version="1.0" encoding="utf-8"?>\n<root><a>1</a><b>foo</b><c>True</c></root>'
+        output = Serializer().encode(self.obj, 'xml')
+        self.assertEquals(output, expected)
 
 
 class BasicSerializerTests(TestCase):
