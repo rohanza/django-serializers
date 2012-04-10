@@ -16,16 +16,24 @@ serialization.  It should be able to support the current `dumpdata` format,
 whilst also being easy to override and customise.
 
 Serializers are declared in a simlar format to `Form` and `Model` declarations,
-with an inner `Meta` class providing general options, and individual fields being specified by declaring `FieldSerializer` instances on the class.
+with an inner `Meta` class providing general options, and individual fields
+being specified by declaring `FieldSerializer` instances on the class.
 
-Arbitrary python objects are serialized using the general `Serializer` class, model instances and querysets may be serialized using the `ModelSerializer` class.
+Arbitrary python objects are serialized using the general `Serializer` class,
+model instances and querysets may be serialized using the `ModelSerializer` class.
 
 The declaration of the serialization structure is independant of the encoding 
-eg. 'json', 'yaml', 'xml'. that is used to produce the final output.  This is desirable, as it means you can declare the serialization structure, without being bound to a given output format.
+eg. 'json', 'yaml', 'xml'. that is used to produce the final output.  This is
+desirable, as it means you can declare the serialization structure, without
+being bound to a given output format.
 
-`django-serializers` intentionally does not address deserialization.  Replacing the existing `loaddata` deserialization with a more flexible deserialization API is considered out of scope.
+`django-serializers` intentionally does not address deserialization.  Replacing
+the existing `loaddata` deserialization with a more flexible deserialization
+API is considered out of scope.
 
-`django-serializers` also does not provide an API that is backwards compatible with the existing `dumpdata` serializers.  This may happen at some point in the future. 
+`django-serializers` also does not provide an API that is backwards compatible
+with the existing `dumpdata` serializers.  This may happen at some point in
+the future.
 
 Installation
 ============
@@ -34,21 +42,24 @@ Install using pip:
 
     pip install django-serializers
 
-Optionally, if you want to include the `django-serializer` tests in your project, add `serializers` to your `INSTALLED_APPS` setting:
+Optionally, if you want to include the `django-serializer` tests in your
+project, add `serializers` to your `INSTALLED_APPS` setting:
 
     INSTALLED_APPS = (
     	...
     	'seriliazers',
     )
 
-Note that if you have cloned the git repo you can run the tests directly, with the provided `manage.py` file:
+Note that if you have cloned the git repo you can run the tests directly, with
+the provided `manage.py` file:
 
 	manage.py test
 
 Quick Start
 ===========
 
-We'll use the following example class to show some simple examples of serialization:
+We'll use the following example class to show some simple examples
+of serialization:
 
     class Person(object):
         def __init__(self, first_name, last_name, age):
@@ -60,7 +71,9 @@ We'll use the following example class to show some simple examples of serializat
         def full_name(self):
             return self.first_name + ' ' + self.last_name
 
-You can serialize arbitrary objects using the `Serializer` class.  Objects are serialized into dictionaries, containing key value pairs of any non-private instance attributes on the object:
+You can serialize arbitrary objects using the `Serializer` class.  Objects are
+serialized into dictionaries, containing key value pairs of any non-private
+instance attributes on the object:
 
     >>> from serializers import Serializer
     >>> person = Person('john', 'doe', 42)
@@ -72,7 +85,8 @@ You can serialize arbitrary objects using the `Serializer` class.  Objects are s
         'age': 42
     }
 
-Let's say we only want to include some specific fields.  We can do so either by setting those fields when we instantiate the `Serializer`...
+Let's say we only want to include some specific fields.  We can do so either by
+setting those fields when we instantiate the `Serializer`...
 
     >>> serializer = Serializer(fields=('first_name', 'age'))
     >>> serializer.encode(person, 'json', indent=4)
@@ -93,7 +107,8 @@ Let's say we only want to include some specific fields.  We can do so either by 
         'age': 42
     }
 
-We can also include additional attributes on the object to be serialized, or exclude existing attributes:
+We can also include additional attributes on the object to be serialized, or
+exclude existing attributes:
 
     >>> class PersonSerializer(Serializer):
     >>>     class Meta:
@@ -207,9 +222,12 @@ as the key when serializing the field.
 include_default_fields
 ----------------------
 
-If `include_default_fields` is set to `False`, instance attributes on the object will not be included by default.
+If `include_default_fields` is set to `False`, instance attributes on the
+object will not be included by default.
 
-This means that only fields which have been explicitly included via a `FieldSerializer` declaration, or via the `include` or `fields` options will be included.
+This means that only fields which have been explicitly included via a
+`FieldSerializer` declaration, or via the `include` or `fields` options will
+be included.
 
 For example:
 
@@ -238,7 +256,8 @@ For example:
 FieldSerializer declarations
 ============================
 
-Serialization of individual fields may be explicitly controlled by defining `FieldSerializer` instances on the `Serializer` class.
+Serialization of individual fields may be explicitly controlled by defining
+`FieldSerializer` instances on the `Serializer` class.
 
 For instance:
 
@@ -246,7 +265,9 @@ For instance:
         full_name = FieldSerializer(label='Full name')
         age = FieldSerializer(label='Age')
 
-The `Serializer` class itself provides the `FieldSerializer` interface, so may be used in the same way, to nest a serialzation of the complete objet inside a field:
+The `Serializer` class itself provides the `FieldSerializer` interface, so may
+be used in the same way, to nest a serialzation of the complete object inside
+a field:
 
     class CustomSerializer(object):
         full_name = FieldSerializer(label='Full name')
@@ -255,7 +276,11 @@ The `Serializer` class itself provides the `FieldSerializer` interface, so may b
         class Meta:
             include_default_fields = False
 
-Any declared `FieldSerializer` classes are automatically added to the list of attributes that should be included on the output.  (See also the `include` option.)  By default the full list of fields to serialize will be the list of all the instance attributes set on the model, plus all the explictly declared `FieldSerializer` classes.
+Any declared `FieldSerializer` classes are automatically added to the list of
+attributes that should be included on the output.  (See also the `include`
+option.)  By default the full list of fields to serialize will be the list of
+all the instance attributes set on the model, plus all the explictly declared
+`FieldSerializer` classes.
 
 
 Serializer methods
@@ -266,18 +291,26 @@ encode(self, obj, format=None, **opts)
 
 The main entry point into serializers.
 
-`format` should be a string representing the desired encoding.  Valid choices are `json`, `yaml` and `xml`.  If format is left as `None`, the object will be serialized into a python object in the desired structure, but will not be rendered into a final output format.
+`format` should be a string representing the desired encoding.  Valid choices
+are `json`, `yaml` and `xml`.  If format is left as `None`, the object will be
+serialized into a python object in the desired structure, but will not be
+rendered into a final output format.
 
 `opts` may be any additional options specific to the encoding.
 
-Internally serialization is a two-step process.  The first step calls the `serialize()` method, which serializes the object into the desired structure, limited to a set of primative python datatypes.  The second step calls the `render()` method, which renders that structure into the final output string or bytestream.
+Internally serialization is a two-step process.  The first step calls the
+`serialize()` method, which serializes the object into the desired structure,
+limited to a set of primative python datatypes.  The second step calls the
+`render()` method, which renders that structure into the final output string
+or bytestream.
 
 serialize(self, obj)
 --------------------
 
 Returns a native python datatype representing the given object.
 
-If you are writing a custom field serializer, overiding `serialize()` will let you customise how the output is generated.
+If you are writing a custom field serializer, overiding `serialize()` will let
+you customise how the output is generated.
 
 serialize_field_name(self, obj, field_name)
 -------------------------------------------
@@ -290,25 +323,36 @@ or the `field_name` string otherwise.
 serialize_field_value(self, obj, field_name)
 --------------------------------------------
 
-Returns a native python datatype representing the value for the given field name.
+Returns a native python datatype representing the value for the given
+field name.
 
-For a `FieldSerializer` this will default to calling `serialize()` on the attribute given by `getattr(obj, fieldname)`, which means it will serialize only the given field.
+For a `FieldSerializer` this will default to calling `serialize()` on the
+attribute given by `getattr(obj, fieldname)`, which means it will serialize
+only the given field.
 
 For a `Serializer` this will default to call `serialize()` on the entire object.
 
-If you are writing a custom `FieldSerializer` and need to control exactly which attributes of the object are serialized, you will need to override `serialize_field_value()`.  (For example if you are writing a `datetime` serializer which combines information from two seperate `date` and `time` attributes on an object.)
+If you are writing a custom `FieldSerializer` and need to control exactly which
+attributes of the object are serialized, you will need to override
+`serialize_field_value()`.  (For example if you are writing a `datetime`
+serializer which combines information from two seperate `date` and `time`
+attributes on an object.)
 
 get_field_names(self, obj)
 --------------------------
 
 Return the entire set of field names that should be serialized for an object.
-By default this method takes into account the set of fields returned by `get_default_field_names()`, plus any explicitly declared `FieldSerializer` classes, as well as the `include`, `exclude`, and `fields` options.
+By default this method takes into account the set of fields returned by
+`get_default_field_names()`, plus any explicitly declared `FieldSerializer`
+classes, as well as the `include`, `exclude`, and `fields` options.
 
 get_default_field_names(self, obj)
 ----------------------------------
 
 Return the set of field names that should be serialized for an object.
-If a serializer has no `FieldSerializer` classes declared, and nothing set for the `include`, `exclude` and `fields` options, then this will be the set of fields names that will be serialized.
+If a serializer has no `FieldSerializer` classes declared, and nothing set for
+the `include`, `exclude` and `fields` options, then this will be the set of
+fields names that will be serialized.
 
 get_field_serializer(self, obj, field_name)
 -------------------------------------------
@@ -320,16 +364,20 @@ for the given field name, and if not, falls back to `get_default_field_serialize
 get_default_field_serializer(self, obj, field_name)
 ---------------------------------------------------
 
-Returns the serializer instance that should be used for a field if there was no explicitly declared `FieldSerializer` class for the given `field_name`.
+Returns the serializer instance that should be used for a field if there was no
+explicitly declared `FieldSerializer` class for the given `field_name`.
 
 render(self, data, format, **opts)
 ----------------------------------
 
-Performs the final part of the serialization, translating a simple python object into the output format.
+Performs the final part of the serialization, translating a simple python
+object into the output format.
 
-The `data` argument is provided by the return value of the `serialize()` method.
+The `data` argument is provided by the return value of the
+`serialize()` method.
 
-`format` and `**opts` are the arguments as passed through by the `encode()` method.
+`format` and `**opts` are the arguments as passed through by the
+`encode()` method.
 
 TODO
 ====
@@ -354,23 +402,23 @@ Copyright © Tom Christie.
 
 All rights reserved.
 
-Redistribution and use in source and binary forms, with or without 
+Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
 
-Redistributions of source code must retain the above copyright notice, this 
+Redistributions of source code must retain the above copyright notice, this
 list of conditions and the following disclaimer.
-Redistributions in binary form must reproduce the above copyright notice, this 
-list of conditions and the following disclaimer in the documentation and/or 
+Redistributions in binary form must reproduce the above copyright notice, this
+list of conditions and the following disclaimer in the documentation and/or
 other materials provided with the distribution.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE 
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 [1]: http://twitter.com/_tomchristie
