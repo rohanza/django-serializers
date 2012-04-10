@@ -1,6 +1,6 @@
 from serializers.serializer import (
     Serializer,
-    SerializerField,
+    FieldSerializer,
 )
 from serializers.modelserializer import (
     ModelSerializer,
