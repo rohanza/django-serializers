@@ -215,8 +215,8 @@ The complete list of field names that should be serialized.  If provided
 label
 -----
 
-The `label` option is only relevant if the serializer is used as a field
-serializer.  If `label` is set it is used determines name that should be used
+The `label` option is only relevant if the serializer is used as a serializer
+field.  If `label` is set it is used determines name that should be used
 as the key when serializing the field.
 
 include_default_fields
@@ -309,7 +309,7 @@ serialize(self, obj)
 
 Returns a native python datatype representing the given object.
 
-If you are writing a custom field serializer, overiding `serialize()` will let
+If you are writing a custom serializer field, overiding `serialize()` will let
 you customise how the output is generated.
 
 serialize_field_name(self, obj, field_name)
