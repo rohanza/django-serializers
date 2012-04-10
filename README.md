@@ -201,8 +201,8 @@ label
 -----
 
 The `label` option is only relevant if the serializer is used as a field
-serializer.  If `label` is set it is used determines the as the key when
-serializing the field.
+serializer.  If `label` is set it is used determines name that should be used
+as the key when serializing the field.
 
 include_default_fields
 ----------------------
@@ -232,6 +232,8 @@ For example:
     class CustomSerializer(Serializer):
         email = FieldSerializer(serialize=lamda obj: obj.lower())  # Force email fields to lowercase.
         ...
+
+**TODO**: preserve_field_ordering, depth, source
 
 FieldSerializer declarations
 ============================

@@ -335,6 +335,35 @@ class SerializerFieldTests(TestCase):
 
         self.assertEquals(CustomSerializer().serialize(self.obj), expected)
 
+    def test_serializer_fields_do_not_share_state(self):
+        """
+        Make sure that different serializer instances do not share the same
+        FieldSerializer instances.
+        """
+        class CustomSerializer(Serializer):
+            example = FieldSerializer()
+
+        serializer_one = CustomSerializer()
+        serializer_two = CustomSerializer()
+        self.assertFalse(serializer_one.fields['example'] is serializer_two.fields['example'])
+
+    def test_serializer_field_order_preserved(self):
+        """
+        Make sure ordering of FieldSerializers is preserved.
+        """
+        class CustomSerializer(Serializer):
+            first_name = FieldSerializer()
+            full_name = FieldSerializer()
+            age = FieldSerializer()
+            last_name = FieldSerializer()
+
+            class Meta:
+                preserve_field_order = True
+
+        keys = ['first_name', 'full_name', 'age', 'last_name']
+
+        self.assertEquals(CustomSerializer().serialize(self.obj).keys(), keys)
+
 
 class NestedSerializationTests(TestCase):
     """
@@ -342,22 +371,55 @@ class NestedSerializationTests(TestCase):
     """
 
     def setUp(self):
-        sister = Person('jane', 'doe', 44)
-        self.obj = Person('john', 'doe', 42, sister=sister)
+        emily = Person('emily', 'doe', 37)
+        jane = Person('jane', 'doe', 44)
+        self.obj = Person('john', 'doe', 42, siblings=[jane, emily])
 
     def test_nested_serialization(self):
         """
-        By default only serialize instance properties, not class properties.
+        Default with nested serializers is to include full serialization of
+        child elements.
         """
         expected = {
             'first_name': 'john',
             'last_name': 'doe',
             'age': 42,
-            'sister': {
-                'first_name': 'jane',
-                'last_name': 'doe',
-                'age': 44,
-            }
+            'siblings': [
+                {
+                    'first_name': 'jane',
+                    'last_name': 'doe',
+                    'age': 44,
+                },
+                {
+                    'first_name': 'emily',
+                    'last_name': 'doe',
+                    'age': 37,
+                }
+            ]
         }
 
         self.assertEquals(Serializer().serialize(self.obj), expected)
+
+    def test_nested_serialization_with_args(self):
+        """
+        We can pass serializer options through to nested fields as usual.
+        """
+        class PersonSerializer(Serializer):
+            siblings = FieldSerializer(fields=('full_name',))
+
+            class Meta:
+                fields = ('full_name', 'siblings')
+
+        expected = {
+            'full_name': 'john doe',
+            'siblings': [
+                {
+                    'full_name': 'jane doe'
+                },
+                {
+                    'full_name': 'emily doe',
+                }
+            ]
+        }
+
+        self.assertEquals(PersonSerializer().serialize(self.obj), expected)
