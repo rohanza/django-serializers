@@ -181,11 +181,7 @@ class BaseSerializer(object):
         return renderer.render(data, **opts)
 
 
-class Serializer(BaseSerializer):
-    __metaclass__ = SerializerMetaclass
-
-
-class FieldSerializer(Serializer):
+class BaseFieldSerializer(object):
     def serialize_field_value(self, obj, field_name):
         return self.serialize(getattr(obj, field_name))
 
@@ -194,7 +190,7 @@ class FieldSerializer(Serializer):
             return obj
         elif self._is_simple_callable(obj):
             return self.serialize(obj())
-        return super(FieldSerializer, self).serialize(obj)
+        return super(BaseFieldSerializer, self).serialize(obj)
 
     def _is_protected_type(self, obj):
         """
@@ -218,4 +214,11 @@ class FieldSerializer(Serializer):
             (inspect.ismethod(obj) and len(inspect.getargspec(obj)[0]) <= 1)
         )
 
+
+class Serializer(BaseSerializer):
+    __metaclass__ = SerializerMetaclass
+
+
+class FieldSerializer(BaseFieldSerializer, Serializer):
+    pass
 # TODO: FlatFieldSerializer, SelfSerializer, LazyBindingSerializer
