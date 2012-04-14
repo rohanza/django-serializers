@@ -1,5 +1,5 @@
 from django.test import TestCase
-from serializers import Serializer, SerializerField
+from serializers import Serializer
 
 
 class ExampleObject(object):
@@ -210,13 +210,31 @@ class SerializerFieldTests(TestCase):
     def setUp(self):
         self.obj = Person('john', 'doe', 42)
 
-    def test_fields_added_as_include(self):
+    def test_explicit_fields_replace_defaults(self):
         """
-        Declaring a SerializerField adds it to the set of fields that are
-        serialized by default.
+        Setting explicit fields on a serializer replaces the default set of
+        fields that would have been serialized.
         """
         class CustomSerializer(Serializer):
-            full_name = SerializerField()
+            full_name = Serializer()
+
+        expected = {
+            'full_name': 'john doe',
+        }
+
+        self.assertEquals(CustomSerializer().serialize(self.obj), expected)
+
+    def test_include_default_fields(self):
+        """
+        If `include_default_fields` is set to `True`, both fields which
+        have been explicitly included via a Serializer field declaration,
+        and regular default object fields will be included.
+        """
+        class CustomSerializer(Serializer):
+            full_name = Serializer()
+
+            class Meta:
+                include_default_fields = True
 
         expected = {
             'full_name': 'john doe',
@@ -227,32 +245,14 @@ class SerializerFieldTests(TestCase):
 
         self.assertEquals(CustomSerializer().serialize(self.obj), expected)
 
-    def test_include_default_fields(self):
-        """
-        If `include_default_fields` is set to `False`, only fields which
-        have been explicitly included via a `SerializerField` declaration,
-        or via the `include` or `fields` options will be included.
-        """
-        class CustomSerializer(Serializer):
-            full_name = SerializerField()
-
-            class Meta:
-                include_default_fields = False
-
-        expected = {
-            'full_name': 'john doe',
-        }
-
-        self.assertEquals(CustomSerializer().serialize(self.obj), expected)
-
     def test_field_label(self):
         """
         A serializer field can take a 'label' argument, which is used as the
         field key instead of the field's property name.
         """
         class CustomSerializer(Serializer):
-            full_name = SerializerField(label='Full name')
-            age = SerializerField(label='Age')
+            full_name = Serializer(label='Full name')
+            age = Serializer(label='Age')
 
             class Meta:
                 fields = ('full_name', 'age')
@@ -264,34 +264,34 @@ class SerializerFieldTests(TestCase):
 
         self.assertEquals(CustomSerializer().serialize(self.obj), expected)
 
-    def test_field_func(self):
+    def test_field_source(self):
         """
-        A serializer field can take a 'serialize' argument, which is used to
-        serialize the field value.
+        A serializer field can take a 'source' argument, which is used as the
+        field key instead of the field's property name.
         """
         class CustomSerializer(Serializer):
-            full_name = SerializerField(label='Full name',
-                                        serialize=lambda name: 'Mr ' + name.title())
-            age = SerializerField(label='Age')
+            name = Serializer(source='full_name')
+            age = Serializer()
 
             class Meta:
-                fields = ('full_name', 'age')
+                fields = ('name', 'age')
 
         expected = {
-            'Full name': 'Mr John Doe',
-            'Age': 42
+            'name': 'john doe',
+            'age': 42
         }
 
         self.assertEquals(CustomSerializer().serialize(self.obj), expected)
 
-    def test_serializer_as_field(self):
+    def test_source_all(self):
         """
-        A regular serializer can be used as a field serializer, in which case
-        the complete object will be used when serializing that field.
+        Setting source='*', means the complete object will be used when
+        serializing that field.
         """
         class CustomSerializer(Serializer):
-            full_name = SerializerField(label='Full name')
-            details = Serializer(fields=('first_name', 'last_name'), label='Details')
+            full_name = Serializer(label='Full name')
+            details = Serializer(fields=('first_name', 'last_name'), label='Details',
+                                 source='*')
 
             class Meta:
                 fields = ('full_name', 'details')
@@ -306,21 +306,21 @@ class SerializerFieldTests(TestCase):
 
         self.assertEquals(CustomSerializer().serialize(self.obj), expected)
 
-    def test_custom_serializer_as_field(self):
+    def test_source_all_with_custom_serializer(self):
         """
-        A regular serializer can be used as a field serializer, in which case
-        the complete object will be used when serializing that field.
+        A custom serializer can be used with source='*' as serialize the
+        complete object within a field.
         """
         class DetailsSerializer(Serializer):
-            first_name = SerializerField(label='First name')
-            last_name = SerializerField(label='Last name')
+            first_name = Serializer(label='First name')
+            last_name = Serializer(label='Last name')
 
             class Meta:
                 fields = ('first_name', 'last_name')
 
         class CustomSerializer(Serializer):
-            full_name = SerializerField(label='Full name')
-            details = DetailsSerializer(label='Details')
+            full_name = Serializer(label='Full name')
+            details = DetailsSerializer(label='Details', source='*')
 
             class Meta:
                 fields = ('full_name', 'details')
@@ -335,27 +335,47 @@ class SerializerFieldTests(TestCase):
 
         self.assertEquals(CustomSerializer().serialize(self.obj), expected)
 
-    def test_serializer_fields_do_not_share_state(self):
+    def test_field_func(self):
         """
-        Make sure that different serializer instances do not share the same
-        SerializerField instances.
+        A serializer field can take a 'serialize' argument, which is used to
+        serialize the field value.
         """
         class CustomSerializer(Serializer):
-            example = SerializerField()
+            full_name = Serializer(label='Full name',
+                                   serialize=lambda name: 'Mr ' + name.title())
+            age = Serializer(label='Age')
 
-        serializer_one = CustomSerializer()
-        serializer_two = CustomSerializer()
-        self.assertFalse(serializer_one.fields['example'] is serializer_two.fields['example'])
+            class Meta:
+                fields = ('full_name', 'age')
+
+        expected = {
+            'Full name': 'Mr John Doe',
+            'Age': 42
+        }
+
+        self.assertEquals(CustomSerializer().serialize(self.obj), expected)
+
+    # def test_serializer_fields_do_not_share_state(self):
+    #     """
+    #     Make sure that different serializer instances do not share the same
+    #     SerializerField instances.
+    #     """
+    #     class CustomSerializer(Serializer):
+    #         example = Serializer()
+
+    #     serializer_one = CustomSerializer()
+    #     serializer_two = CustomSerializer()
+    #     self.assertFalse(serializer_one.fields['example'] is serializer_two.fields['example'])
 
     def test_serializer_field_order_preserved(self):
         """
-        Make sure ordering of SerializerFields is preserved.
+        Make sure ordering of serializer fields is preserved.
         """
         class CustomSerializer(Serializer):
-            first_name = SerializerField()
-            full_name = SerializerField()
-            age = SerializerField()
-            last_name = SerializerField()
+            first_name = Serializer()
+            full_name = Serializer()
+            age = Serializer()
+            last_name = Serializer()
 
             class Meta:
                 preserve_field_order = True
@@ -405,7 +425,7 @@ class NestedSerializationTests(TestCase):
         We can pass serializer options through to nested fields as usual.
         """
         class PersonSerializer(Serializer):
-            siblings = SerializerField(fields=('full_name',))
+            siblings = Serializer(fields=('full_name',))
 
             class Meta:
                 fields = ('full_name', 'siblings')

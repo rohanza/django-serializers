@@ -17,7 +17,7 @@ whilst also being easy to override and customise.
 
 Serializers are declared in a simlar format to `Form` and `Model` declarations,
 with an inner `Meta` class providing general options, and individual fields
-being specified by declaring `SerializerField` instances on the class.
+being specified by declaring other, nested `Serializer` instances on the class.
 
 Arbitrary python objects are serialized using the general `Serializer` class,
 model instances and querysets may be serialized using the `ModelSerializer` class.
@@ -46,14 +46,14 @@ Optionally, if you want to include the `django-serializer` tests in your
 project, add `serializers` to your `INSTALLED_APPS` setting:
 
     INSTALLED_APPS = (
-    	...
-    	'seriliazers',
+        ...
+        'seriliazers',
     )
 
 Note that if you have cloned the git repo you can run the tests directly, with
 the provided `manage.py` file:
 
-	manage.py test
+    manage.py test
 
 Quick Start
 ===========
@@ -78,7 +78,7 @@ instance attributes on the object:
     >>> from serializers import Serializer
     >>> person = Person('john', 'doe', 42)
     >>> serializer = Serializer()
-    >>> serializer.encode(person, 'json', indent=4)
+    >>> print serializer.encode(person, 'json', indent=4)
     {
         'first_name': 'john',
         'last_name': 'doe',
@@ -89,7 +89,7 @@ Let's say we only want to include some specific fields.  We can do so either by
 setting those fields when we instantiate the `Serializer`...
 
     >>> serializer = Serializer(fields=('first_name', 'age'))
-    >>> serializer.encode(person, 'json', indent=4)
+    >>> print serializer.encode(person, 'json', indent=4)
     {
         'first_name': 'john',
         'age': 42
@@ -101,7 +101,7 @@ setting those fields when we instantiate the `Serializer`...
     >>>     class Meta:
     >>>         fields = ('first_name', 'age')
     >>>
-    >>> PersonSerializer().encode(person, 'json', indent=4)
+    >>> print PersonSerializer().encode(person, 'json', indent=4)
     {
         'first_name': 'john',
         'age': 42
@@ -115,42 +115,27 @@ exclude existing attributes:
     >>>         exclude = ('first_name', 'last_name')
     >>>         include = 'full_name'
     >>>
-    >>> PersonSerializer().encode(person, 'json', indent=4)
+    >>> print PersonSerializer().encode(person, 'json', indent=4)
     {
         'full_name': 'john doe',
         'age': 42
     }
 
-We can also explicitly define how existing fields should be serialized:
+We can also explicitly define how the object fields should be serialized:
 
     >>> class PersonSerializer(Serializer):
-    >>>    first_name = SerializerField(label='First name')
-    >>>    last_name = SerializerField(label='Last name')
-    >>>    class Meta:
-    >>>        fields = ('first_name', 'last_name')
+    >>>    first_name = Serializer(label='First name')
+    >>>    last_name = Serializer(label='Last name')
     >>>
-    >>> PersonSerializer().encode(person, 'json', indent=4)
+    >>> print PersonSerializer().encode(person, 'json', indent=4)
     {
         'First name': 'john',
         'Last name': 'doe'
     }
 
-Or we can add new fields to be serialized:
-
-    >>> class PersonSerializer(Serializer):
-    >>>    proper_name = SerializerField(serialize=lambda obj: 'Mr' + obj.proper())
-    >>>    class Meta:
-    >>>        fields = ('proper_name', 'age')
-    >>>
-    >>> PersonSerializer().encode(person, 'json', indent=4)
-    {
-        'proper_name': 'Mr John Doe',
-        'age': 42
-    }
-
 We can also define new types of field and control how they are serialized:
 
-    >>> class ClassNameField(SerializerField):
+    >>> class ClassNameField(Serializer):
     >>>     def serialize_field_value(self, obj, field_name)
     >>>         return obj.__class__.__name__
     >>>
@@ -158,7 +143,7 @@ We can also define new types of field and control how they are serialized:
     >>>     class_name = ClassNameField(label='class')
     >>>     fields = Serializer()
     >>>
-    >>> ObjectSerializer().encode(person, 'json', indent=4)
+    >>> print ObjectSerializer().encode(person, 'json', indent=4)
     {
         'class': 'Person',
         'fields': {
@@ -198,8 +183,6 @@ include
 A list of field names that should be included in the output.  This could
 include properties, class attributes, or any other attribute on the object that
 would not otherwise be serialized.
-Any SerializerFields defined on the class will automatically be added to the
-list of included fields.
 
 exclude
 -------
@@ -216,71 +199,80 @@ label
 -----
 
 The `label` option is only relevant if the serializer is used as a serializer
-field.  If `label` is set it is used determines name that should be used
-as the key when serializing the field.
+field.  If `label` is set it determines the name that should be used as the
+key when serializing the field.
+
+source
+------
+
+The `source` option is only relevant if the serializer is used as a serializer
+field.  If `source` is set it determines which attribute of the object to
+retrieve when serializing the field.
+
+A value of '*' is a special case, which denotes the entire object should be
+passed through and serialized by this field.
+
+For example, the following serializer:
+
+    class ClassNameSerializer(Serializer):
+        def serialize_field_value(self, obj, field_name):
+            return obj.__class__.__name__
+
+    class CustomSerializer(Serializer):
+        class_name = ClassNameSerializer(label='class')
+        fields = Serializer(source='*')
+
+Would serialize objects into a structure like this:
+
+    {
+        "class": "Person"
+        "fields": {
+            "age": 23, 
+            "name": "Frank"
+            ...
+        }, 
+    }
 
 include_default_fields
 ----------------------
 
-If `include_default_fields` is set to `False`, instance attributes on the
-object will not be included by default.
+The default set of fields on an object are the attributes that will be
+serialized if no serializer fields are explicitly specified on the class.
 
-This means that only fields which have been explicitly included via a
-`SerializerField` declaration, or via the `include` or `fields` options will
-be included.
+When serializer fields *are* explicitly specified, these will normally be
+used instead of the default fields.
 
-For example:
+If `include_default_fields` is set to `True`, then *both* the explicitly
+specified serializer fields *and* the object's default fields will be used.
+
+For example, in this case, only the 'full_name' field will be serialized:
 
     class CustomSerializer(Serializer):
-        full_name = SerializerField(label='Full name')
-        age = SerializerField(label='Age')
+        full_name = Serializer(label='Full name')
+
+In this case, both the 'full_name' field, and any instance attributes on the
+object will be serialized:
+
+    class CustomSerializer(Serializer):
+        full_name = Serializer(label='Full name')
         
         class Meta:
-            include_default_fields = False  # Only 'full_name' and 'age' will be serialized
+            include_default_fields = True
 
 serialize
 ---------
 
-Provides an simple way to specify the serialization function for a field.
+Provides a simple way to override the default serialization function.
 `serialize` should be a function that takes a single argument and returns
 the serialized output.
 
 For example:
 
     class CustomSerializer(Serializer):
-        email = SerializerField(serialize=lamda obj: obj.lower())  # Force email fields to lowercase.
+        email = Serializer(serialize=lamda obj: obj.lower())  # Force email fields to lowercase.
         ...
 
-**TODO**: preserve_field_ordering, depth, source
-
-SerializerField declarations
-============================
-
-Serialization of individual fields may be explicitly controlled by defining
-`SerializerField` instances on the `Serializer` class.
-
-For instance:
-
-    class CustomSerializer(Serializer):
-        full_name = SerializerField(label='Full name')
-        age = SerializerField(label='Age')
-
-The `Serializer` class itself provides the `SerializerField` interface, so may
-be used in the same way, to nest a serialzation of the complete object inside
-a field:
-
-    class CustomSerializer(Serializer):
-        full_name = SerializerField(label='Full name')
-        details = Serializer()
-
-        class Meta:
-            include_default_fields = False
-
-Any declared `SerializerField` classes are automatically added to the list of
-attributes that should be included on the output.  (See also the `include`
-option.)  By default the full list of fields to serialize will be the list of
-all the instance attributes set on the model, plus all the explictly declared
-`SerializerField` classes.
+**TODO**: preserve_field_ordering, depth
 
 
 Serializer methods
@@ -326,17 +318,17 @@ serialize_field_value(self, obj, field_name)
 Returns a native python datatype representing the value for the given
 field name.
 
-For a `SerializerField` this will default to calling `serialize()` on the
-attribute given by `getattr(obj, fieldname)`, which means it will serialize
-only the given field.
+This will default to calling `serialize()` on the attribute given by
+`getattr(obj, field_name)`, which means it will serialize the given field.
 
-For a `Serializer` this will default to call `serialize()` on the entire object.
+If the `source` argument has been specified, that will be used instead of
+the `field_name` argument.
 
-If you are writing a custom `SerializerField` and need to control exactly which
-attributes of the object are serialized, you will need to override
-`serialize_field_value()`.  (For example if you are writing a `datetime`
-serializer which combines information from two seperate `date` and `time`
-attributes on an object.)
+If you are writing a custom `Serializer` for use as a field and need to control
+exactly which attributes of the object are serialized, you will need to
+override `serialize_field_value()`.  (For example if you are writing a
+`datetime` serializer which combines information from two seperate `date` and
+`time` attributes on an object.)
 
 get_field_names(self, obj)
 --------------------------
