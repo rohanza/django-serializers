@@ -1,6 +1,6 @@
 from decimal import Decimal
 from django.utils.datastructures import SortedDict
-from django.utils.encoding import smart_str
+from django.utils.encoding import smart_str, smart_unicode
 import copy
 import datetime
 import inspect
@@ -242,10 +242,21 @@ class ModelSerializer(Serializer):
         elif self._is_simple_callable(obj):
             return self.serialize(obj())
         elif hasattr(obj, 'all') and self._is_simple_callable(obj.all):
-            return self.serialize(obj.all())
+            return [self.serialize(item) for item in obj.all()]
         elif hasattr(obj, '__iter__'):
             return [self.serialize(item) for item in obj]
         return self.serialize_object(obj)
+
+
+class ModelNameField(Serializer):
+    def serialize_field_value(self, obj, field_name):
+        return smart_unicode(obj._meta)
+
+
+class DumpDataSerializer(ModelSerializer):
+    pk = Serializer()
+    model = ModelNameField()
+    fields = ModelSerializer(source='*', exclude='id')
 
 # class ObjectSerializer(Serializer):
 #     """

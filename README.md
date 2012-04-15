@@ -376,7 +376,6 @@ TODO
 
 * Depth
 * Recursion
-* Cyclical serialization declarations
 
 
 Changelog

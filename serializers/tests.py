@@ -1,5 +1,9 @@
+import datetime
+from django.core import serializers
+from django.db import models
 from django.test import TestCase
-from serializers import Serializer
+from django.test.utils import override_settings
+from serializers import Serializer, DumpDataSerializer
 
 
 class ExampleObject(object):
@@ -443,3 +447,34 @@ class NestedSerializationTests(TestCase):
         }
 
         self.assertEquals(PersonSerializer().serialize(self.obj), expected)
+
+
+# Tests for simple models without relationships.
+
+class RaceEntry(models.Model):
+    name = models.CharField(max_length=100)
+    runner_number = models.PositiveIntegerField()
+    start_time = models.DateTimeField()
+    finish_time = models.DateTimeField()
+
+    def race_time(self):
+        return self.finish_time - self.start_time
+
+
+class TestSimpleModel(TestCase):
+    def setUp(self):
+        super(TestSimpleModel, self).setUp()
+        self.serializer = DumpDataSerializer()
+
+    @override_settings(INSTALLED_APPS=('serializers.testmodels',))
+    def test_simple_model(self):
+        self.entry = RaceEntry.objects.create(
+            name='John doe',
+            runner_number=6014,
+            start_time=datetime.datetime.now(),
+            finish_time=datetime.datetime.now()
+        )
+        self.assertEquals(
+            self.serializer.encode(RaceEntry.objects.all(), 'json'),
+            serializers.serialize('json', RaceEntry.objects.all())
+        )
