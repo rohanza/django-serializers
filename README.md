@@ -237,7 +237,6 @@ depth
 -----
 
 The `depth` argument controls how nested objects should be serialized.
-
 The default is `None`, which means serialization should descend into nested
 objects.
 
