@@ -141,7 +141,7 @@ We can also define new types of field and control how they are serialized:
     >>>
     >>> class ObjectSerializer(Serializer):
     >>>     class_name = ClassNameField(label='class')
-    >>>     fields = Serializer()
+    >>>     fields = Serializer(source='*')
     >>>
     >>> print ObjectSerializer().encode(person, 'json', indent=4)
     {
@@ -233,6 +233,22 @@ Would serialize objects into a structure like this:
         }, 
     }
 
+depth
+-----
+
+The `depth` argument controls how nested objects should be serialized.
+
+The default is `None`, which means serialization should descend into nested
+objects.
+
+If `depth` is set to an integer value, serialization will descend that many
+levels into nested objects, before starting serialize nested models with a
+"flat" value.
+
+For example, setting `depth=0` ensures that only the fields of the top level
+object will be serialized, and any nested objects will simply be serialized
+as simple string representations of those objects.
+
 include_default_fields
 ----------------------
 
@@ -272,7 +288,11 @@ For example:
         email = Serializer(serialize=lamda obj: obj.lower())  # Force email fields to lowercase.
         ...
 
-**TODO**: preserve_field_ordering, depth
+preserve_field_ordering
+-----------------------
+
+If set to `True`, objects will be serialized using ordered dictionaries,
+which preserve the ordering that the fields are declared in.
 
 
 Serializer methods
@@ -370,12 +390,6 @@ The `data` argument is provided by the return value of the
 
 `format` and `**opts` are the arguments as passed through by the
 `encode()` method.
-
-TODO
-====
-
-* Depth
-* Recursion
 
 
 Changelog
