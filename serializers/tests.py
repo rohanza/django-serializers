@@ -37,6 +37,9 @@ class Person(object):
     def is_child(self):
         return self.age < self.CHILD_AGE
 
+    def __unicode__(self):
+        return self.full_name
+
 
 class EncoderTests(TestCase):
     def setUp(self):
@@ -395,8 +398,9 @@ class NestedSerializationTests(TestCase):
     """
 
     def setUp(self):
+        fred = Person('fred', 'bloggs', 41)
         emily = Person('emily', 'doe', 37)
-        jane = Person('jane', 'doe', 44)
+        jane = Person('jane', 'doe', 44, partner=fred)
         self.obj = Person('john', 'doe', 42, siblings=[jane, emily])
 
     def test_nested_serialization(self):
@@ -413,6 +417,11 @@ class NestedSerializationTests(TestCase):
                     'first_name': 'jane',
                     'last_name': 'doe',
                     'age': 44,
+                    'partner': {
+                        'first_name': 'fred',
+                        'last_name': 'bloggs',
+                        'age': 41,
+                    }
                 },
                 {
                     'first_name': 'emily',
@@ -429,10 +438,8 @@ class NestedSerializationTests(TestCase):
         We can pass serializer options through to nested fields as usual.
         """
         class PersonSerializer(Serializer):
+            full_name = Serializer()
             siblings = Serializer(fields=('full_name',))
-
-            class Meta:
-                fields = ('full_name', 'siblings')
 
         expected = {
             'full_name': 'john doe',
@@ -448,6 +455,59 @@ class NestedSerializationTests(TestCase):
 
         self.assertEquals(PersonSerializer().serialize(self.obj), expected)
 
+    def test_depth_zero_serialization(self):
+        """
+        If 'depth' equals 0 then nested objects should be serialized as
+        flat values.
+        """
+        expected = {
+            'first_name': 'john',
+            'last_name': 'doe',
+            'age': 42,
+            'siblings': [
+                'jane doe',
+                'emily doe'
+            ]
+        }
+
+        self.assertEquals(Serializer(depth=0).serialize(self.obj), expected)
+
+    def test_depth_one_serialization(self):
+        """
+        If 'depth' is greater than 0 then nested objects should be serialized
+        as flat values once the specified depth has been reached.
+        """
+        expected = {
+            'first_name': 'john',
+            'last_name': 'doe',
+            'age': 42,
+            'siblings': [
+                {
+                    'first_name': 'jane',
+                    'last_name': 'doe',
+                    'age': 44,
+                    'partner': 'fred bloggs'
+                },
+                {
+                    'first_name': 'emily',
+                    'last_name': 'doe',
+                    'age': 37,
+                }
+            ]
+        }
+
+        self.assertEquals(Serializer(depth=1).serialize(self.obj), expected)
+
+# class RecursiveSerializationTests(TestCase):
+#     def setUp(self):
+#         emily = Person('emily', 'doe', 37)
+#         jane = Person('jane', 'doe', 44)
+#         john = Person('john', 'doe', 42, siblings=[jane, emily])
+#         emily.siblings = [jane, john]
+#         jane.siblings = [emily, john]
+#         self.obj = 'john'
+
+
 
 # Tests for simple models without relationships.
 
@@ -457,24 +517,46 @@ class RaceEntry(models.Model):
     start_time = models.DateTimeField()
     finish_time = models.DateTimeField()
 
-    def race_time(self):
-        return self.finish_time - self.start_time
-
 
 class TestSimpleModel(TestCase):
     def setUp(self):
-        super(TestSimpleModel, self).setUp()
         self.serializer = DumpDataSerializer()
-
-    @override_settings(INSTALLED_APPS=('serializers.testmodels',))
-    def test_simple_model(self):
-        self.entry = RaceEntry.objects.create(
+        RaceEntry.objects.create(
             name='John doe',
             runner_number=6014,
             start_time=datetime.datetime.now(),
             finish_time=datetime.datetime.now()
         )
+
+    def test_simple_model(self):
         self.assertEquals(
             self.serializer.encode(RaceEntry.objects.all(), 'json'),
             serializers.serialize('json', RaceEntry.objects.all())
+        )
+
+
+class User(models.Model):
+    email = models.EmailField()
+
+
+class Profile(models.Model):
+    user = models.ForeignKey(User, related_name='profile')
+    country_of_birth = models.CharField(max_length=100)
+    date_of_birth = models.DateTimeField()
+
+
+class TestFKModel(TestCase):
+    def setUp(self):
+        self.serializer = DumpDataSerializer()
+        user = User.objects.create(email='joe@example.com')
+        Profile.objects.create(
+            user=user,
+            country_of_birth='UK',
+            date_of_birth=datetime.datetime.now()
+        )
+
+    def test_fk_model(self):
+        self.assertEquals(
+            self.serializer.encode(Profile.objects.all(), 'json'),
+            serializers.serialize('json', Profile.objects.all())
         )

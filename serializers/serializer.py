@@ -73,10 +73,10 @@ class BaseSerializer(object):
     creation_counter = 0
 
     def __init__(self, **kwargs):
-
         self.opts = Options()
         self.opts.label = kwargs.get('label', getattr(self.Meta, 'label', None))
         self.opts.source = kwargs.get('source', getattr(self.Meta, 'source', None))
+        self.opts.depth = kwargs.get('depth', getattr(self.Meta, 'depth', None))
         self.opts.include = kwargs.get('include', getattr(self.Meta, 'include', ()))
         self.opts.exclude = kwargs.get('exclude', getattr(self.Meta, 'exclude', ()))
         self.opts.fields = kwargs.get('fields', getattr(self.Meta, 'fields', ()))
@@ -95,6 +95,10 @@ class BaseSerializer(object):
 
         self.creation_counter = BaseSerializer.creation_counter
         BaseSerializer.creation_counter += 1
+
+    def initialize(self, parent):
+        if parent.opts.depth is not None:
+            self.opts.depth = parent.opts.depth - 1
 
     def _is_protected_type(self, obj):
         """
@@ -165,6 +169,8 @@ class BaseSerializer(object):
         If a field does not have an explicitly declared serializer, return the
         default serializer instance that should be used for that field.
         """
+        if self.opts.depth is not None and self.opts.depth <= 0:
+            return ValueSerializer()
         return self.__class__()
 
     def serialize_field_name(self, obj, field_name):
@@ -184,6 +190,7 @@ class BaseSerializer(object):
 
         for field_name in self.get_field_names(obj):
             serializer = self.get_field_serializer(obj, field_name)
+            serializer.initialize(parent=self)
             key = serializer.serialize_field_name(obj, field_name)
             value = serializer.serialize_field_value(obj, field_name)
             ret[key] = value
@@ -224,13 +231,20 @@ class ValueSerializer(Serializer):
             return obj
         elif self._is_simple_callable(obj):
             return self.serialize(obj())
-        return self._serialize_to_string(obj)
+        elif hasattr(obj, '__iter__'):
+            return [self.serialize(item) for item in obj]
+        return smart_unicode(obj)
 
 
 class ModelSerializer(Serializer):
     """
-    A serializer can deal with model instances and querysets.
+    A serializer that deals with model instances and querysets.
     """
+
+    def get_default_field_serializer(self, obj, field_name):
+        if self.opts.depth is not None and self.opts.depth <= 0:
+            return PKSerializer()
+        return self.__class__()
 
     def get_default_field_names(self, obj):
         fields = obj._meta.fields + obj._meta.many_to_many
@@ -248,33 +262,29 @@ class ModelSerializer(Serializer):
         return self.serialize_object(obj)
 
 
+class PKSerializer(Serializer):
+    """
+    A serializer that returns the model instance's pk value.
+    """
+
+    def serialize_object(self, obj):
+        return obj.pk
+
+
 class ModelNameField(Serializer):
+    """
+    A serializer that returns the model instance's model name.  Eg. 'auth.User'
+    """
+
     def serialize_field_value(self, obj, field_name):
         return smart_unicode(obj._meta)
 
 
 class DumpDataSerializer(ModelSerializer):
+    """
+    A serializer that is intended to produce dumpdata formatted structures.
+    """
+
     pk = Serializer()
     model = ModelNameField()
-    fields = ModelSerializer(source='*', exclude='id')
-
-# class ObjectSerializer(Serializer):
-#     """
-#     A serializer that converts objects into equivelent dict representations.
-#     """
-
-#     def get_default_field_names(self, obj):
-#         """
-#         Any non-private instance attributes on the object are treated as the
-#         default object fields.
-#         """
-#         return [key for key in obj.__dict__.keys() if not(key.startswith('_'))]
-
-#     def serialize(self, obj):
-#         if self._is_protected_type(obj):
-#             return obj
-#         elif self._is_simple_callable(obj):
-#             return self.serialize(obj())
-#         elif hasattr(obj, '__iter__'):
-#             return [self.serialize(item) for item in obj]
-#         return self.serialize_object(obj)
+    fields = ModelSerializer(source='*', exclude='id', depth=0)
