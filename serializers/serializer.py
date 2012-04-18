@@ -44,8 +44,20 @@ def _get_declared_fields(bases, attrs):
     return SortedDict(fields)
 
 
-class Options(object):
-    pass
+class SerializerOptions(object):
+    def __init__(self, meta, **kwargs):
+        self.label = kwargs.get('label', getattr(meta, 'label', None))
+        self.source = kwargs.get('source', getattr(meta, 'source', None))
+        self.depth = kwargs.get('depth', getattr(meta, 'depth', None))
+        self.include = kwargs.get('include', getattr(meta, 'include', ()))
+        self.exclude = kwargs.get('exclude', getattr(meta, 'exclude', ()))
+        self.fields = kwargs.get('fields', getattr(meta, 'fields', ()))
+        self.include_default_fields = kwargs.get('include_default_fields',
+            getattr(meta, 'include_default_fields', False)
+        )
+        self.preserve_field_order = kwargs.get('preserve_field_order',
+            getattr(meta, 'preserve_field_order', ())
+        )
 
 
 class SerializerMetaclass(type):
@@ -55,14 +67,8 @@ class SerializerMetaclass(type):
 
 
 class BaseSerializer(object):
-    class Meta:
-        label = None
-        source = None
-        include = ()
-        exclude = ()
-        fields = ()
-        include_default_fields = False
-        preserve_field_order = False
+    class Meta(object):
+        pass
 
     renderer_classes = {
         'xml': XMLRenderer,
@@ -73,19 +79,7 @@ class BaseSerializer(object):
     creation_counter = 0
 
     def __init__(self, **kwargs):
-        self.opts = Options()
-        self.opts.label = kwargs.get('label', getattr(self.Meta, 'label', None))
-        self.opts.source = kwargs.get('source', getattr(self.Meta, 'source', None))
-        self.opts.depth = kwargs.get('depth', getattr(self.Meta, 'depth', None))
-        self.opts.include = kwargs.get('include', getattr(self.Meta, 'include', ()))
-        self.opts.exclude = kwargs.get('exclude', getattr(self.Meta, 'exclude', ()))
-        self.opts.fields = kwargs.get('fields', getattr(self.Meta, 'fields', ()))
-        self.opts.include_default_fields = kwargs.get('include_default_fields',
-            getattr(self.Meta, 'include_default_fields', False)
-        )
-        self.opts.preserve_field_order = kwargs.get('preserve_field_order',
-            getattr(self.Meta, 'preserve_field_order', ())
-        )
+        self.opts = SerializerOptions(self.Meta, **kwargs)
 
         if 'serialize' in kwargs:
             self.serialize = kwargs.get('serialize')
