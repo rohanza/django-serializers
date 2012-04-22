@@ -147,12 +147,6 @@ class BaseSerializer(Field):
         except KeyError:
             return self.get_default_field_serializer(obj, field_name)
 
-    def _serialize_field_value(self, obj, field_name):
-        if self.source == '*':
-            return self.serialize(obj)
-        field_name = self.source or field_name
-        return self.serialize_field_value(obj, field_name)
-
     def get_default_field_names(self, obj):
         """
         Given an object, return the default set of field names to serialize.
@@ -185,7 +179,7 @@ class BaseSerializer(Field):
             serializer = self._get_field_serializer(obj, field_name)
             serializer.initialize(parent=self)
             key = self.serialize_field_key(obj, field_name, serializer)
-            value = serializer._serialize_field_value(obj, field_name)
+            value = serializer._serialize_field(obj, field_name)
             ret[key] = value
         return ret
 
