@@ -3,7 +3,7 @@ from django.core import serializers
 from django.db import models
 from django.test import TestCase
 from serializers import Serializer, ModelSerializer, DumpDataSerializer
-from serializers.fields import ValueField
+from serializers.fields import Field
 
 
 class ExampleObject(object):
@@ -348,8 +348,8 @@ class SerializerFieldTests(TestCase):
         serialize the field value.
         """
         class CustomSerializer(Serializer):
-            full_name = Serializer(label='Full name',
-                                   serialize=lambda name: 'Mr ' + name.title())
+            full_name = Field(label='Full name',
+                              serialize=lambda name: 'Mr ' + name.title())
             age = Serializer(label='Age')
 
             class Meta:
@@ -379,10 +379,10 @@ class SerializerFieldTests(TestCase):
         Make sure ordering of serializer fields is preserved.
         """
         class CustomSerializer(Serializer):
-            first_name = ValueField()
-            full_name = ValueField()
-            age = ValueField()
-            last_name = ValueField()
+            first_name = Field()
+            full_name = Field()
+            age = Field()
+            last_name = Field()
 
             class Meta:
                 preserve_field_order = True
@@ -438,7 +438,7 @@ class NestedSerializationTests(TestCase):
         We can pass serializer options through to nested fields as usual.
         """
         class PersonSerializer(Serializer):
-            full_name = Serializer()
+            full_name = Field()
             siblings = Serializer(fields=('full_name',))
 
         expected = {
@@ -508,7 +508,7 @@ class NestedSerializationTests(TestCase):
 #         self.obj = 'john'
 
 
-# Tests for simple models without relationships.
+##### Simple models without relationships. #####
 
 class RaceEntry(models.Model):
     name = models.CharField(max_length=100)
@@ -534,6 +534,8 @@ class TestSimpleModel(TestCase):
         )
 
 
+##### One to one relationships #####
+
 class User(models.Model):
     email = models.EmailField()
 
@@ -545,6 +547,9 @@ class Profile(models.Model):
 
 
 class TestOneToOneModel(TestCase):
+    """
+    Test one-to-one field relationship on a model.
+    """
     def setUp(self):
         self.dumpdata = DumpDataSerializer()
         self.nested_model = ModelSerializer()
@@ -591,8 +596,15 @@ class TestOneToOneModel(TestCase):
 
 
 class TestReverseOneToOneModel(TestCase):
+    """
+    Test reverse relationship of one-to-one fields.
+
+    Note the Django's dumpdata serializer doesn't support reverse relations,
+    which wouldn't make sense in that context, so we don't include them in
+    the tests.
+    """
+
     def setUp(self):
-        self.dumpdata = DumpDataSerializer()
         self.nested_model = ModelSerializer(include=('profile',))
         self.flat_model = ModelSerializer(depth=0, include=('profile',))
         user = User.objects.create(email='joe@example.com')

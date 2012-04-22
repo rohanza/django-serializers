@@ -77,19 +77,16 @@ class BaseSerializer(Field):
     def __init__(self, **kwargs):
         source = kwargs.get('source', None)
         label = kwargs.get('label', None)
-        super(BaseSerializer, self).__init__(source=source, label=label)
+        serialize = kwargs.get('serialize', None)
+        super(BaseSerializer, self).__init__(source=source, label=label, serialize=serialize)
+
         self.opts = SerializerOptions(self.Meta, **kwargs)
-
         self.stack = []
-
-        if 'serialize' in kwargs:
-            self.serialize = kwargs.get('serialize')
-
         self.fields = SortedDict((key, copy.copy(field))
                            for key, field in self.base_fields.items())
 
     def get_flat_serializer(self):
-        return ValueField()
+        return Field()
 
     def get_recursive_serializer(self):
         return self.get_flat_serializer()

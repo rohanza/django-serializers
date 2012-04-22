@@ -5,9 +5,11 @@ from django.db.models.related import RelatedObject
 class Field(object):
     creation_counter = 0
 
-    def __init__(self, source=None, label=None):
+    def __init__(self, source=None, label=None, serialize=None):
         self.source = source
         self.label = label
+        if serialize:
+            self.serialize = serialize
         self.creation_counter = Field.creation_counter
         Field.creation_counter += 1
 
@@ -16,7 +18,11 @@ class Field(object):
         # self.stack = parent.stack[:]
 
     def serialize(self, obj):
-        raise NotImplementedError
+        if is_protected_type(obj):
+            return obj
+        elif hasattr(obj, '__iter__'):
+            return [self.serialize(item) for item in obj]
+        return smart_unicode(obj)
 
     def get_field_value(self, obj, field_name):
         return getattr(obj, field_name)
@@ -28,18 +34,6 @@ class Field(object):
         field_name = self.source or field_name
         obj = self.get_field_value(obj, field_name)
         return self.serialize(obj)
-
-
-class ValueField(Field):
-    """
-    Basic serialization into primative types.
-    """
-    def serialize(self, obj):
-        if is_protected_type(obj):
-            return obj
-        elif hasattr(obj, '__iter__'):
-            return [self.serialize(item) for item in obj]
-        return smart_unicode(obj)
 
 
 class ModelField(Field):
