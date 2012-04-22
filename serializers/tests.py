@@ -498,14 +498,30 @@ class NestedSerializationTests(TestCase):
 
         self.assertEquals(Serializer(depth=1).serialize(self.obj), expected)
 
-# class RecursiveSerializationTests(TestCase):
-#     def setUp(self):
-#         emily = Person('emily', 'doe', 37)
-#         jane = Person('jane', 'doe', 44)
-#         john = Person('john', 'doe', 42, siblings=[jane, emily])
-#         emily.siblings = [jane, john]
-#         jane.siblings = [emily, john]
-#         self.obj = 'john'
+
+class RecursiveSerializationTests(TestCase):
+    def setUp(self):
+        emily = Person('emily', 'doe', 37)
+        john = Person('john', 'doe', 42, daughter=emily)
+        emily.father = john
+        self.obj = john
+
+    def test_recursiive_serialization(self):
+        """
+        If recursion occurs, serializer will fall back to flat values.
+        """
+        expected = {
+            'first_name': 'john',
+            'last_name': 'doe',
+            'age': 42,
+            'daughter': {
+                    'first_name': 'emily',
+                    'last_name': 'doe',
+                    'age': 37,
+                    'father': 'john doe'
+            }
+        }
+        self.assertEquals(Serializer().serialize(self.obj), expected)
 
 
 ##### Simple models without relationships. #####
