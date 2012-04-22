@@ -2,8 +2,7 @@ import datetime
 from django.core import serializers
 from django.db import models
 from django.test import TestCase
-from django.test.utils import override_settings
-from serializers import Serializer, DumpDataSerializer
+from serializers import Serializer, DumpDataSerializer, ValueField
 
 
 class ExampleObject(object):
@@ -379,10 +378,10 @@ class SerializerFieldTests(TestCase):
         Make sure ordering of serializer fields is preserved.
         """
         class CustomSerializer(Serializer):
-            first_name = Serializer()
-            full_name = Serializer()
-            age = Serializer()
-            last_name = Serializer()
+            first_name = ValueField()
+            full_name = ValueField()
+            age = ValueField()
+            last_name = ValueField()
 
             class Meta:
                 preserve_field_order = True

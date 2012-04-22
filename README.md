@@ -349,34 +349,18 @@ override `serialize_field_value()`.  (For example if you are writing a
 `datetime` serializer which combines information from two seperate `date` and
 `time` attributes on an object.)
 
-get_field_names(self, obj)
---------------------------
-
-Return the entire set of field names that should be serialized for an object.
-By default this method takes into account the set of fields returned by
-`get_default_field_names()`, plus any explicitly declared `SerializerField`
-classes, as well as the `include`, `exclude`, and `fields` options.
-
 get_default_field_names(self, obj)
 ----------------------------------
 
-Return the set of field names that should be serialized for an object.
-If a serializer has no `SerializerField` classes declared, and nothing set for
-the `include`, `exclude` and `fields` options, then this will be the set of
+Return the default set of field names that should be serialized for an object.
+If a serializer has no `Serializer` classes declared as fields, then this will be the set of
 fields names that will be serialized.
-
-get_field_serializer(self, obj, field_name)
--------------------------------------------
-
-Returns the serializer instance that should be used for a field.
-By default this checks to see if there is an explicitly defined `SerializerField`
-for the given field name, and if not, falls back to `get_default_field_serializer`.
 
 get_default_field_serializer(self, obj, field_name)
 ---------------------------------------------------
 
 Returns the serializer instance that should be used for a field if there was no
-explicitly declared `SerializerField` class for the given `field_name`.
+explicitly declared `Serializer` field for the given `field_name`.
 
 render(self, data, format, **opts)
 ----------------------------------

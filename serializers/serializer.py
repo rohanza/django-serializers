@@ -1,11 +1,12 @@
 from decimal import Decimal
 from django.utils.datastructures import SortedDict
-from django.utils.encoding import smart_str, smart_unicode
+from django.utils.encoding import smart_str
 import copy
 import datetime
 import inspect
 import types
 from serializers.renderers import (JSONRenderer, YAMLRenderer, XMLRenderer)
+from serializers.fields import *
 
 
 def _remove_items(seq, exclude):
@@ -31,7 +32,7 @@ def _get_declared_fields(bases, attrs):
     """
     fields = [(field_name, attrs.pop(field_name))
               for field_name, obj in attrs.items()
-              if isinstance(obj, BaseSerializer)]
+              if isinstance(obj, Field)]
     fields.sort(key=lambda x: x[1].creation_counter)
 
     # If this class is subclassing another Serializer, add that Serializer's
@@ -46,8 +47,6 @@ def _get_declared_fields(bases, attrs):
 
 class SerializerOptions(object):
     def __init__(self, meta, **kwargs):
-        self.label = kwargs.get('label', getattr(meta, 'label', None))
-        self.source = kwargs.get('source', getattr(meta, 'source', None))
         self.depth = kwargs.get('depth', getattr(meta, 'depth', None))
         self.include = kwargs.get('include', getattr(meta, 'include', ()))
         self.exclude = kwargs.get('exclude', getattr(meta, 'exclude', ()))
@@ -66,7 +65,7 @@ class SerializerMetaclass(type):
         return super(SerializerMetaclass, cls).__new__(cls, name, bases, attrs)
 
 
-class BaseSerializer(object):
+class BaseSerializer(Field):
     class Meta(object):
         pass
 
@@ -76,9 +75,10 @@ class BaseSerializer(object):
         'yaml': YAMLRenderer
     }
 
-    creation_counter = 0
-
     def __init__(self, **kwargs):
+        source = kwargs.get('source', None)
+        label = kwargs.get('label', None)
+        super(BaseSerializer, self).__init__(source=source, label=label)
         self.opts = SerializerOptions(self.Meta, **kwargs)
 
         if 'serialize' in kwargs:
@@ -86,9 +86,6 @@ class BaseSerializer(object):
 
         self.fields = SortedDict((key, copy.copy(field))
                            for key, field in self.base_fields.items())
-
-        self.creation_counter = BaseSerializer.creation_counter
-        BaseSerializer.creation_counter += 1
 
     def initialize(self, parent):
         if parent.opts.depth is not None:
@@ -119,14 +116,14 @@ class BaseSerializer(object):
     def _serialize_as_string(self, obj):
         return smart_str(obj)
 
-    def get_field_serializer_names(self):
+    def _get_field_serializer_names(self):
         """
         Returns the set of all field names for explicitly declared
         Serializer fields on this class.
         """
         return self.fields.keys()
 
-    def get_field_names(self, obj):
+    def _get_field_names(self, obj):
         """
         Given an object, return the set of field names to serialize.
         """
@@ -134,21 +131,13 @@ class BaseSerializer(object):
         if opts.fields:
             return opts.fields
         else:
-            fields = self.get_field_serializer_names()
+            fields = self._get_field_serializer_names()
             if opts.include_default_fields or not self.fields:
                 fields += self.get_default_field_names(obj)
             fields += list(opts.include)
             return _remove_items(fields, opts.exclude)
 
-    def get_default_field_names(self, obj):
-        """
-        Given an object, return the default set of field names to serialize.
-        This is what would be serialized if no explicit `Serializer` fields
-        are declared, and `include`, `exclude` and `fields` are not set.
-        """
-        return [key for key in obj.__dict__.keys() if not(key.startswith('_'))]
-
-    def get_field_serializer(self, obj, field_name):
+    def _get_field_serializer(self, obj, field_name):
         """
         Given an object and a field name, return the serializer instance that
         should be used to serialize that field.
@@ -158,23 +147,33 @@ class BaseSerializer(object):
         except KeyError:
             return self.get_default_field_serializer(obj, field_name)
 
+    def _serialize_field_value(self, obj, field_name):
+        if self.source == '*':
+            return self.serialize(obj)
+        field_name = self.source or field_name
+        return self.serialize_field_value(obj, field_name)
+
+    def get_default_field_names(self, obj):
+        """
+        Given an object, return the default set of field names to serialize.
+        This is what would be serialized if no explicit `Serializer` fields
+        are declared.
+        """
+        return [key for key in obj.__dict__.keys() if not(key.startswith('_'))]
+
     def get_default_field_serializer(self, obj, field_name):
         """
         If a field does not have an explicitly declared serializer, return the
         default serializer instance that should be used for that field.
         """
         if self.opts.depth is not None and self.opts.depth <= 0:
-            return ValueSerializer()
+            return ValueField()
         return self.__class__()
 
-    def serialize_field_name(self, obj, field_name):
-        return self.opts.label or field_name
-
-    def serialize_field_value(self, obj, field_name):
-        field_name = self.opts.source or field_name
-        if field_name != '*':
-            obj = getattr(obj, field_name)
-        return self.serialize(obj)
+    def serialize_field_key(self, obj, field_name, field):
+        if getattr(field, 'label', None):
+            return field.label
+        return field_name
 
     def serialize_object(self, obj):
         if self.opts.preserve_field_order:
@@ -182,11 +181,11 @@ class BaseSerializer(object):
         else:
             ret = {}
 
-        for field_name in self.get_field_names(obj):
-            serializer = self.get_field_serializer(obj, field_name)
+        for field_name in self._get_field_names(obj):
+            serializer = self._get_field_serializer(obj, field_name)
             serializer.initialize(parent=self)
-            key = serializer.serialize_field_name(obj, field_name)
-            value = serializer.serialize_field_value(obj, field_name)
+            key = self.serialize_field_key(obj, field_name, serializer)
+            value = serializer._serialize_field_value(obj, field_name)
             ret[key] = value
         return ret
 
@@ -214,20 +213,13 @@ class Serializer(BaseSerializer):
     __metaclass__ = SerializerMetaclass
 
 
-class ValueSerializer(Serializer):
+class FlatSerializer(Serializer):
     """
     A simple serialzer that leaves primative values as-is, and converts all
     other types to their string representation.
     """
-
-    def serialize(self, obj):
-        if self._is_protected_type(obj):
-            return obj
-        elif self._is_simple_callable(obj):
-            return self.serialize(obj())
-        elif hasattr(obj, '__iter__'):
-            return [self.serialize(item) for item in obj]
-        return smart_unicode(obj)
+    def get_default_field_serializer(self, obj, field_name):
+        return ValueField()
 
 
 class ModelSerializer(Serializer):
@@ -237,7 +229,7 @@ class ModelSerializer(Serializer):
 
     def get_default_field_serializer(self, obj, field_name):
         if self.opts.depth is not None and self.opts.depth <= 0:
-            return PKSerializer()
+            return FlatModelSerializer()
         return self.__class__()
 
     def get_default_field_names(self, obj):
@@ -256,22 +248,13 @@ class ModelSerializer(Serializer):
         return self.serialize_object(obj)
 
 
-class PKSerializer(Serializer):
+class FlatModelSerializer(ModelSerializer):
     """
-    A serializer that returns the model instance's pk value.
+    A model serializer that returns pk's for model instances, rather than
+    returning the full object.
     """
-
-    def serialize_object(self, obj):
-        return obj.pk
-
-
-class ModelNameField(Serializer):
-    """
-    A serializer that returns the model instance's model name.  Eg. 'auth.User'
-    """
-
-    def serialize_field_value(self, obj, field_name):
-        return smart_unicode(obj._meta)
+    def get_default_field_serializer(self, obj, field_name):
+        return FlatModelField()
 
 
 class DumpDataSerializer(ModelSerializer):
@@ -281,4 +264,4 @@ class DumpDataSerializer(ModelSerializer):
 
     pk = Serializer()
     model = ModelNameField()
-    fields = ModelSerializer(source='*', exclude='id', depth=0)
+    fields = FlatModelSerializer(source='*', exclude='id')

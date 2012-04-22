@@ -1,8 +1,12 @@
 from serializers.serializer import (
     Serializer,
-    ValueSerializer,
+    FlatSerializer,
     ModelSerializer,
+    FlatModelSerializer,
     DumpDataSerializer
+)
+from serializers.fields import (
+    ValueField,
 )
 
 __version__ = '0.1.0'
