@@ -2,7 +2,8 @@ import datetime
 from django.core import serializers
 from django.db import models
 from django.test import TestCase
-from serializers import Serializer, DumpDataSerializer, ValueField
+from serializers import Serializer, ModelSerializer, DumpDataSerializer
+from serializers.fields import ValueField
 
 
 class ExampleObject(object):
@@ -507,7 +508,6 @@ class NestedSerializationTests(TestCase):
 #         self.obj = 'john'
 
 
-
 # Tests for simple models without relationships.
 
 class RaceEntry(models.Model):
@@ -539,23 +539,92 @@ class User(models.Model):
 
 
 class Profile(models.Model):
-    user = models.ForeignKey(User, related_name='profile')
+    user = models.OneToOneField(User, related_name='profile')
     country_of_birth = models.CharField(max_length=100)
     date_of_birth = models.DateTimeField()
 
 
-class TestFKModel(TestCase):
+class TestOneToOneModel(TestCase):
     def setUp(self):
-        self.serializer = DumpDataSerializer()
+        self.dumpdata = DumpDataSerializer()
+        self.nested_model = ModelSerializer()
+        self.flat_model = ModelSerializer(depth=0)
         user = User.objects.create(email='joe@example.com')
         Profile.objects.create(
             user=user,
             country_of_birth='UK',
-            date_of_birth=datetime.datetime.now()
+            date_of_birth=datetime.datetime(day=5, month=4, year=1979)
         )
 
-    def test_fk_model(self):
+    def test_onetoone_dumpdata(self):
         self.assertEquals(
-            self.serializer.encode(Profile.objects.all(), 'json'),
+            self.dumpdata.encode(Profile.objects.all(), 'json'),
             serializers.serialize('json', Profile.objects.all())
+        )
+
+    def test_onetoone_nested(self):
+        expected = {
+            'id': 1,
+            'user': {
+                'id': 1,
+                'email': 'joe@example.com'
+            },
+            'country_of_birth': 'UK',
+            'date_of_birth': datetime.datetime(day=5, month=4, year=1979)
+        }
+        self.assertEquals(
+            self.nested_model.serialize(Profile.objects.get(id=1)),
+            expected
+        )
+
+    def test_onetoone_flat(self):
+        expected = {
+            'id': 1,
+            'user': 1,
+            'country_of_birth': 'UK',
+            'date_of_birth': datetime.datetime(day=5, month=4, year=1979)
+        }
+        self.assertEquals(
+            self.flat_model.serialize(Profile.objects.get(id=1)),
+            expected
+        )
+
+
+class TestReverseOneToOneModel(TestCase):
+    def setUp(self):
+        self.dumpdata = DumpDataSerializer()
+        self.nested_model = ModelSerializer(include=('profile',))
+        self.flat_model = ModelSerializer(depth=0, include=('profile',))
+        user = User.objects.create(email='joe@example.com')
+        Profile.objects.create(
+            user=user,
+            country_of_birth='UK',
+            date_of_birth=datetime.datetime(day=5, month=4, year=1979)
+        )
+
+    def test_reverse_onetoone_nested(self):
+        expected = {
+            'id': 1,
+            'email': u'joe@example.com',
+            'profile': {
+                'id': 1,
+                'country_of_birth': u'UK',
+                'date_of_birth': datetime.datetime(day=5, month=4, year=1979),
+                'user': 1
+            },
+        }
+        self.assertEquals(
+            self.nested_model.serialize(User.objects.get(id=1)),
+            expected
+        )
+
+    def test_reverse_onetoone_flat(self):
+        expected = {
+            'id': 1,
+            'email': 'joe@example.com',
+            'profile': 1,
+        }
+        self.assertEquals(
+            self.flat_model.serialize(User.objects.get(id=1)),
+            expected
         )
