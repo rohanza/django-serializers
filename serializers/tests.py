@@ -656,3 +656,81 @@ class TestReverseOneToOneModel(TestCase):
             self.flat_model.serialize(User.objects.get(id=1)),
             expected
         )
+
+
+class Owner(models.Model):
+    email = models.EmailField()
+
+
+class Vehicle(models.Model):
+    owner = models.ForeignKey(Owner, related_name='vehicles')
+    licence = models.CharField(max_length=20)
+    date_of_manufacture = models.DateField()
+
+
+class TestFKModel(TestCase):
+    """
+    Test one-to-one field relationship on a model.
+    """
+    def setUp(self):
+        self.dumpdata = DumpDataSerializer()
+        self.nested_model = ModelSerializer()
+        self.flat_model = ModelSerializer(depth=0)
+        self.owner = Owner.objects.create(
+            email='tom@example.com'
+        )
+        self.car = Vehicle.objects.create(
+            owner=self.owner,
+            licence='DJANGO42',
+            date_of_manufacture=datetime.date(day=6, month=6, year=2005)
+        )
+        self.bike = Vehicle.objects.create(
+            owner=self.owner,
+            licence='',
+            date_of_manufacture=datetime.date(day=8, month=8, year=1990)
+        )
+
+    def test_fk_dumpdata(self):
+        self.assertEquals(
+            self.dumpdata.encode(Vehicle.objects.all(), 'json'),
+            serializers.serialize('json', Vehicle.objects.all())
+        )
+
+    def test_fk_nested(self):
+        expected = {
+            'id': 1,
+            'owner': {
+                'id': 1,
+                'email': u'tom@example.com'
+            },
+            'licence': u'DJANGO42',
+            'date_of_manufacture': datetime.date(day=6, month=6, year=2005)
+        }
+        self.assertEquals(
+            self.nested_model.serialize(Vehicle.objects.get(id=1)),
+            expected
+        )
+
+    def test_fk_flat(self):
+        expected = {
+            'id': 1,
+            'owner':  1,
+            'licence': u'DJANGO42',
+            'date_of_manufacture': datetime.date(day=6, month=6, year=2005)
+        }
+        self.assertEquals(
+            self.flat_model.serialize(Vehicle.objects.get(id=1)),
+            expected
+        )
+
+    def test_reverse_fk_flat(self):
+        expected = {
+            'id': 1,
+            'email': u'tom@example.com',
+            'vehicles':  [1, 2]
+        }
+        serializer = ModelSerializer(include=('vehicles',), depth=0)
+        self.assertEquals(
+            serializer.serialize(Owner.objects.get(id=1)),
+            expected
+        )

@@ -54,8 +54,11 @@ class ModelField(Field):
             return obj.serializable_value(field_name)
         except AttributeError:
             field = obj._meta.get_field_by_name(field_name)[0]
-            if isinstance(field, RelatedObject):
-                return getattr(obj, field_name).pk
+            obj = getattr(obj, field_name)
+            if obj.__class__.__name__ == 'RelatedManager':
+                return [item.pk for item in obj.all()]
+            elif isinstance(field, RelatedObject):
+                return obj.pk
             raise
 
 
