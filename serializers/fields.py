@@ -13,11 +13,10 @@ class Field(object):
         self.creation_counter = Field.creation_counter
         Field.creation_counter += 1
 
-    def initialize(self, parent):
-        self.parent = parent
-        # self.stack = parent.stack[:]
-
     def serialize(self, obj):
+        """
+        Serializes the field's value into it's simple representation.
+        """
         if is_protected_type(obj):
             return obj
         elif hasattr(obj, '__iter__'):
@@ -25,9 +24,16 @@ class Field(object):
         return smart_unicode(obj)
 
     def get_field_value(self, obj, field_name):
+        """
+        Given the parent object and the field name, returns the field value
+        that should be serialized.
+        """
         return getattr(obj, field_name)
 
-    def serialize_field(self, obj, field_name):
+    def serialize_field(self, obj, field_name, parent):
+        """
+        The entry point into a field, as called by it's parent serializer.
+        """
         if self.source == '*':
             return self.serialize(obj)
 

@@ -54,7 +54,7 @@ class SerializerOptions(object):
             getattr(meta, 'include_default_fields', False)
         )
         self.preserve_field_order = kwargs.get('preserve_field_order',
-            getattr(meta, 'preserve_field_order', ())
+            getattr(meta, 'preserve_field_order', False)
         )
 
 
@@ -93,12 +93,6 @@ class BaseSerializer(Field):
 
     def get_nested_serializer(self):
         return self.__class__()
-
-    def initialize(self, parent):
-        self.parent = parent
-        self.stack = parent.stack[:]
-        if parent.opts.depth is not None:
-            self.opts.depth = parent.opts.depth - 1
 
     def _is_protected_type(self, obj):
         """
@@ -168,22 +162,27 @@ class BaseSerializer(Field):
             return field.label
         return field_name
 
-    def serialize_field(self, obj, field_name):
+    def serialize_field(self, obj, field_name, parent):
         """
-        Same behaviour as usual Field, except that additionally we save the
-        object and field name to be serialized in case it turns out we've
-        already seen the child object, and we need to roll back and use the
-        recursive serializer instead.
+        Same behaviour as usual Field, except that we need to keep track
+        of state so that we can deal with handling maximum depth and recursion.
         """
+        self.parent = parent
         self.orig_obj = obj
         self.orig_field_name = field_name
-        return super(BaseSerializer, self).serialize_field(obj, field_name)
+
+        self.stack = parent.stack[:]
+        if parent.opts.depth is not None:
+            self.opts.depth = parent.opts.depth - 1
+
+        return super(BaseSerializer, self).serialize_field(obj, field_name, parent)
 
     def serialize_object(self, obj):
         if self.source != '*' and obj in self.stack:
             serializer = self.get_recursive_serializer()
             return serializer.serialize_field(self.orig_obj,
-                                              self.orig_field_name)
+                                              self.orig_field_name,
+                                              self)
         self.stack.append(obj)
 
         if self.opts.preserve_field_order:
@@ -193,9 +192,8 @@ class BaseSerializer(Field):
 
         for field_name in self._get_field_names(obj):
             serializer = self._get_field_serializer(obj, field_name)
-            serializer.initialize(parent=self)
             key = self.get_field_key(obj, field_name, serializer)
-            value = serializer.serialize_field(obj, field_name)
+            value = serializer.serialize_field(obj, field_name, self)
             ret[key] = value
         return ret
 
