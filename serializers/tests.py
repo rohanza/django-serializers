@@ -577,10 +577,16 @@ class TestOneToOneModel(TestCase):
             date_of_birth=datetime.datetime(day=5, month=4, year=1979)
         )
 
-    def test_onetoone_dumpdata(self):
+    def test_onetoone_dumpdata_json(self):
         self.assertEquals(
             self.dumpdata.encode(Profile.objects.all(), 'json'),
             serializers.serialize('json', Profile.objects.all())
+        )
+
+    def test_onetoone_dumpdata_yaml(self):
+        self.assertEquals(
+            self.dumpdata.encode(Profile.objects.all(), 'yaml'),
+            serializers.serialize('yaml', Profile.objects.all())
         )
 
     def test_onetoone_nested(self):
@@ -690,10 +696,16 @@ class TestFKModel(TestCase):
             date_of_manufacture=datetime.date(day=8, month=8, year=1990)
         )
 
-    def test_fk_dumpdata(self):
+    def test_fk_dumpdata_json(self):
         self.assertEquals(
             self.dumpdata.encode(Vehicle.objects.all(), 'json'),
             serializers.serialize('json', Vehicle.objects.all())
+        )
+
+    def test_fk_dumpdata_yaml(self):
+        self.assertEquals(
+            self.dumpdata.encode(Vehicle.objects.all(), 'yaml'),
+            serializers.serialize('yaml', Vehicle.objects.all())
         )
 
     def test_fk_nested(self):
@@ -798,7 +810,7 @@ class TestManyToManyModel(TestCase):
         self.otherbook.authors = [self.mark]
         self.otherbook.save()
 
-    def test_m2m_dumpdata(self):
+    def test_m2m_dumpdata_json(self):
         self.assertEquals(
             self.dumpdata.encode(Book.objects.all(), 'json'),
             serializers.serialize('json', Book.objects.all())
@@ -806,6 +818,16 @@ class TestManyToManyModel(TestCase):
         self.assertEquals(
             self.dumpdata.encode(Author.objects.all(), 'json'),
             serializers.serialize('json', Author.objects.all())
+        )
+
+    def test_m2m_dumpdata_yaml(self):
+        self.assertEquals(
+            self.dumpdata.encode(Book.objects.all(), 'yaml'),
+            serializers.serialize('yaml', Book.objects.all())
+        )
+        self.assertEquals(
+            self.dumpdata.encode(Author.objects.all(), 'yaml'),
+            serializers.serialize('yaml', Author.objects.all())
         )
 
     def test_m2m_nested(self):
