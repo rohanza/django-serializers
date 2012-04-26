@@ -40,7 +40,7 @@ Still to do:
 * Add natural key support to DumpDataSerializer.
 * Add hooks to control which types of model field get serialized by default.  (eg base fields, m2m fields etc…)
 * Ensure DumpDataSerializer only serializes base fields, not inherited fields.  (And vice-versa for ModelSerializer)
-* Add simple hooks for 
+* Add simple hooks for which field classes should be used by default.  (Eg `flat_field=`, `nested_field=` attributes in `Serializer.Meta`)
 * Tests for non-numeric FKs, and FKs with a custom db implementation.
 * Tests for many2many FKs with a 'through' model.
 * Consider ordering by natural key dependancies for DumpDataSerializer.  
@@ -54,6 +54,8 @@ with the existing `dumpdata` serializers.  Need to consider if this is a require
 * I'd like to add `nested.field` syntax to the `include`, `exclude` and `field` argument, to allow quick declarations of nested representations.
 * Add `nested.field` syntax to the `source` argument, to allow quick declarations of serializing nested elements into a flat output structure.
 * source='*' should have the effect of passing through `fields`, `include`, `exclude` to the child field, instead of applying to the parent serializer, so eg. DumpDataSerializer will recognise that those arguments apply to the `fields:` level, rather than referring to what should be included at the root level.
+* streaming output, rather than loading all the data into memory.
+* Add `csv` format.
 
 
 Installation
