@@ -734,3 +734,103 @@ class TestFKModel(TestCase):
             serializer.serialize(Owner.objects.get(id=1)),
             expected
         )
+
+    def test_reverse_fk_nested(self):
+        expected = {
+            'id': 1,
+            'email': u'tom@example.com',
+            'vehicles': [
+                {
+                    'id': 1,
+                    'licence': u'DJANGO42',
+                    'owner': 1,
+                    'date_of_manufacture': datetime.date(day=6, month=6, year=2005)
+                }, {
+                    'id': 2,
+                    'licence': u'',
+                    'owner': 1,
+                    'date_of_manufacture': datetime.date(day=8, month=8, year=1990)
+                }
+            ]
+        }
+        serializer = ModelSerializer(include=('vehicles',))
+        self.assertEquals(
+            serializer.serialize(Owner.objects.get(id=1)),
+            expected
+        )
+
+
+class Author(models.Model):
+    name = models.CharField(max_length=100)
+
+
+class Book(models.Model):
+    authors = models.ManyToManyField(Author, related_name='books')
+    title = models.CharField(max_length=100)
+    in_stock = models.BooleanField()
+
+
+class TestManyToManyModel(TestCase):
+    """
+    Test one-to-one field relationship on a model.
+    """
+    def setUp(self):
+        self.dumpdata = DumpDataSerializer()
+        self.nested_model = ModelSerializer()
+        self.flat_model = ModelSerializer(depth=0)
+        self.lucy = Author.objects.create(
+            name='Lucy Black'
+        )
+        self.mark = Author.objects.create(
+            name='Mark Green'
+        )
+        self.cookbook = Book.objects.create(
+            title='Cooking with gas',
+            in_stock=True
+        )
+        self.cookbook.authors = [self.lucy, self.mark]
+        self.cookbook.save()
+
+        self.otherbook = Book.objects.create(
+            title='Chimera obscura',
+            in_stock=False
+        )
+        self.otherbook.authors = [self.mark]
+        self.otherbook.save()
+
+    def test_m2m_dumpdata(self):
+        self.assertEquals(
+            self.dumpdata.encode(Book.objects.all(), 'json'),
+            serializers.serialize('json', Book.objects.all())
+        )
+        self.assertEquals(
+            self.dumpdata.encode(Author.objects.all(), 'json'),
+            serializers.serialize('json', Author.objects.all())
+        )
+
+    def test_m2m_nested(self):
+        expected = {
+            'id': 1,
+            'title': u'Cooking with gas',
+            'in_stock': True,
+            'authors': [
+                {'id': 1, 'name': 'Lucy Black'},
+                {'id': 2, 'name': 'Mark Green'}
+            ]
+        }
+        self.assertEquals(
+            self.nested_model.serialize(Book.objects.get(id=1)),
+            expected
+        )
+
+    def test_m2m_flat(self):
+        expected = {
+            'id': 1,
+            'title': u'Cooking with gas',
+            'in_stock': True,
+            'authors': [1, 2]
+        }
+        self.assertEquals(
+            self.flat_model.serialize(Book.objects.get(id=1)),
+            expected
+        )

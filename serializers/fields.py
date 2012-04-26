@@ -51,7 +51,7 @@ class ModelField(Field):
 
     def get_field_value(self, obj, field_name):
         try:
-            return obj.serializable_value(field_name)
+            obj = obj.serializable_value(field_name)
         except AttributeError:
             field = obj._meta.get_field_by_name(field_name)[0]
             obj = getattr(obj, field_name)
@@ -60,6 +60,9 @@ class ModelField(Field):
             elif isinstance(field, RelatedObject):
                 return obj.pk
             raise
+        if obj.__class__.__name__ == 'ManyRelatedManager':
+            return [item.pk for item in obj.all()]
+        return obj
 
 
 class ModelNameField(Field):
