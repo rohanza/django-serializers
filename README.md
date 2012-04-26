@@ -16,24 +16,44 @@ serialization.  It should be able to support the current `dumpdata` format,
 whilst also being easy to override and customise.
 
 Serializers are declared in a simlar format to `Form` and `Model` declarations,
-with an inner `Meta` class providing general options, and individual fields
-being specified by declaring other, nested `Serializer` instances on the class.
+with an inner `Meta` class providing general options, and optionally with a set of `Field` classes being declaring inside the `Serializer` class.
 
-Arbitrary python objects are serialized using the general `Serializer` class,
-model instances and querysets may be serialized using the `ModelSerializer` class.
+The `Serializer` class itself also implements the `Field` interface, meaning we can represent serialization of nested instances in various different ways. 
 
-The declaration of the serialization structure is independant of the encoding 
-eg. 'json', 'yaml', 'xml'. that is used to produce the final output.  This is
-desirable, as it means you can declare the serialization structure, without
-being bound to a given output format.
+Features:
 
-`django-serializers` intentionally does not address deserialization.  Replacing
+* Supports serialization of arbitrary python objects using the `Serializer` class.
+* Supports serialization of models and querysets using `ModelSerializer`.
+* Supports serialization to the existing dumpdata format, using `DumpDataSerializer`.
+* Supports flat serialization, and nested serialization (to arbitrary depth), and handles recursive relationships.
+* Allows for both implicit fields, which are determined at the point of serialization, and explicit fields, which are declared on the serializer class.
+* The declaration of the serialization structure is handled independantly of the final encoding used (eg 'json', 'xml' etc…).  This is desirable for eg. APIs which want to support a given dataset being output to a number of different formats.
+* Currently supports 'json', 'yaml', 'xml'.
+* Supports both ordered fields for readablity, and unordered fields for speed.
+* Supports both fields that corrospond to Django model fields, and fields that corrospond to other attributes, such as `get_absolute_url`.
+* Hooks throughout to allow for complete customization.  Eg. Writing key names using javascript style camel casing.
+* Simple, clean API.
+* Comprehensive test suite.
+
+Still to do:
+
+* Add natural key support to DumpDataSerializer.
+* Add hooks to control which types of model field get serialized by default.  (eg base fields, m2m fields etc…)
+* Ensure DumpDataSerializer only serializes base fields, not inherited fields.  (And vice-versa for ModelSerializer)
+* Add simple hooks for 
+* Tests for non-numeric FKs, and FKs with a custom db implementation.
+* Tests for many2many FKs with a 'through' model.
+* Consider ordering by natural key dependancies for DumpDataSerializer.  
+* `django-serializers` currently does not address deserialization.  Replacing
 the existing `loaddata` deserialization with a more flexible deserialization
-API is considered out of scope.
+API is considered out of scope, until the serialization API has first been adequatly addressed.
+* `django-serializers` current does not provide an API that is backwards compatible
+with the existing `dumpdata` serializers.  Need to consider if this is a requirement.  Eg. would this be a replacement to the existing serializers, or an addition to them?
+* The base `Field` instances need to be copied on `Serializer` instatiation.  Right now there's some shared state that needs to disappear.
+* dumpdata `xml` support is incomplete - needs to include the field types.  This metadata needs to be stored by the serializer on the keys of it's output, and ignored by 'jsonn' and 'yaml'.
+* I'd like to add `nested.field` syntax to the `include`, `exclude` and `field` argument, to allow quick declarations of nested representations.
+* Add `nested.field` syntax to the `source` argument, to allow quick declarations of serializing nested elements into a flat output structure.
 
-`django-serializers` also does not provide an API that is backwards compatible
-with the existing `dumpdata` serializers.  This may happen at some point in
-the future.
 
 Installation
 ============
@@ -55,8 +75,8 @@ the provided `manage.py` file:
 
     manage.py test
 
-Quick Start
-===========
+Examples
+========
 
 We'll use the following example class to show some simple examples
 of serialization:
@@ -121,11 +141,11 @@ exclude existing attributes:
         'age': 42
     }
 
-We can also explicitly define how the object fields should be serialized:
+To explicitly define how the object fields should be serialized, we declare those fields on the serializer class:
 
     >>> class PersonSerializer(Serializer):
-    >>>    first_name = Serializer(label='First name')
-    >>>    last_name = Serializer(label='Last name')
+    >>>    first_name = Field(label='First name')
+    >>>    last_name = Field(label='Last name')
     >>>
     >>> print PersonSerializer().encode(person, 'json', indent=4)
     {
@@ -135,9 +155,12 @@ We can also explicitly define how the object fields should be serialized:
 
 We can also define new types of field and control how they are serialized:
 
-    >>> class ClassNameField(Serializer):
-    >>>     def serialize_field_value(self, obj, field_name)
+    >>> class ClassNameField(Field):
+    >>>     def serialize(self, obj)
     >>>         return obj.__class__.__name__
+    >>>
+    >>>     def get_field_value(self, obj, field_name):
+    >>>         return obj
     >>>
     >>> class ObjectSerializer(Serializer):
     >>>     class_name = ClassNameField(label='class')
@@ -153,10 +176,126 @@ We can also define new types of field and control how they are serialized:
         }
     }
 
-**TODO:**
+django-serializers also handles nested serialization of objects:
 
-* Outline nested serialization - full and flat fields
-* Outline model and queryset serialization
+    >>> fred = Person('fred', 'bloggs', 41)
+    >>> emily = Person('emily', 'doe', 37)
+    >>> jane = Person('jane', 'doe', 44, partner=fred)
+    >>> john = Person('john', 'doe', 42, siblings=[jane, emily])
+    >>> Serializer().serialize(john)
+    {
+        'first_name': 'john',
+        'last_name': 'doe',
+        'age': 42,
+        'siblings': [
+            {
+                'first_name': 'jane',
+                'last_name': 'doe',
+                'age': 44,
+                'partner': {
+                    'first_name': 'fred',
+                    'last_name': 'bloggs',
+                    'age': 41,
+                }
+            },
+            {
+                'first_name': 'emily',
+                'last_name': 'doe',
+                'age': 37,
+            }
+        ]
+    }
+
+And handles flat serialization of objects:
+
+    >>> Serializer(depth=0).serialize(john)
+    {
+        'first_name': 'john',
+        'last_name': 'doe',
+        'age': 42,
+        'siblings': [
+            'jane doe',
+            'emily doe'
+        ]
+    }
+
+Similarly model and queryset serialization is supported, and handles either flat or nested serialization of foreign keys, many to many relationships, and one to one relationships, plus reverse relationships:
+
+    >>> class User(models.Model):
+    >>>     email = models.EmailField()
+    >>>
+    >>> class Profile(models.Model):
+    >>>     user = models.OneToOneField(User, related_name='profile')
+    >>>     country_of_birth = models.CharField(max_length=100)
+    >>>     date_of_birth = models.DateTimeField()
+    >>>
+    >>> ModelSerializer().serialize(profile)
+    {
+        'id': 1,
+        'user': {
+            'id': 1,
+            'email': 'joe@example.com'
+        },
+        'country_of_birth': 'UK',
+        'date_of_birth': datetime.datetime(day=5, month=4, year=1979)
+    }
+
+
+Field options
+=============
+
+label
+-----
+
+If `label` is set it determines the name that should be used as the
+key when serializing the field.
+
+source
+------
+
+If `source` is set it determines which attribute of the object to
+retrieve when serializing the field.
+
+A value of '*' is a special case, which denotes the entire object should be
+passed through and serialized by this field.
+
+For example, the following serializer:
+
+    class ClassNameField(Field):
+        def serialize(self, obj):
+            return obj.__class__.__name__
+
+        def get_field_value(self, obj, field_name):
+            return obj
+
+    class CustomSerializer(Serializer):
+        class_name = ClassNameField(label='class')
+        fields = Serializer(source='*', depth=0)
+
+Would serialize objects into a structure like this:
+
+    {
+        "class": "Person"
+        "fields": {
+            "age": 23, 
+            "name": "Frank"
+            ...
+        }, 
+    }
+
+serialize
+---------
+
+Provides a simple way to override the default serialization function.
+`serialize` should be a function that takes a single argument and returns
+the serialized output.
+
+For example:
+
+    class CustomSerializer(Serializer):
+        email = Field(serialize=lamda obj: obj.lower())  # Force email fields to lowercase.
+        ...
+
 
 Serializer options
 ==================
@@ -176,6 +315,7 @@ And the same, using arguments when instantiating the serializer.
 
     serializer = Serializer(fields=('full_name', 'age'))
 
+The serializer class is a subclass of `Field`, so also supports the `Field` API.
 
 include
 -------
@@ -194,44 +334,6 @@ fields
 
 The complete list of field names that should be serialized.  If provided
 `fields` will override `include` and `exclude`.
-
-label
------
-
-The `label` option is only relevant if the serializer is used as a serializer
-field.  If `label` is set it determines the name that should be used as the
-key when serializing the field.
-
-source
-------
-
-The `source` option is only relevant if the serializer is used as a serializer
-field.  If `source` is set it determines which attribute of the object to
-retrieve when serializing the field.
-
-A value of '*' is a special case, which denotes the entire object should be
-passed through and serialized by this field.
-
-For example, the following serializer:
-
-    class ClassNameSerializer(Serializer):
-        def serialize_field_value(self, obj, field_name):
-            return obj.__class__.__name__
-
-    class CustomSerializer(Serializer):
-        class_name = ClassNameSerializer(label='class')
-        fields = Serializer(source='*')
-
-Would serialize objects into a structure like this:
-
-    {
-        "class": "Person"
-        "fields": {
-            "age": 23, 
-            "name": "Frank"
-            ...
-        }, 
-    }
 
 depth
 -----
@@ -274,24 +376,39 @@ object will be serialized:
         class Meta:
             include_default_fields = True
 
-serialize
----------
-
-Provides a simple way to override the default serialization function.
-`serialize` should be a function that takes a single argument and returns
-the serialized output.
-
-For example:
-
-    class CustomSerializer(Serializer):
-        email = Serializer(serialize=lamda obj: obj.lower())  # Force email fields to lowercase.
-        ...
-
 preserve_field_ordering
 -----------------------
 
 If set to `True`, objects will be serialized using ordered dictionaries,
 which preserve the ordering that the fields are declared in.
+
+
+Field methods
+=============
+
+serialize(self, obj)
+--------------------
+
+Returns a native python datatype representing the given object.
+
+If you are writing a custom field, overiding `serialize()` will let
+you customise how the output is generated.
+
+get_field_value(self, obj, field_name)
+--------------------------------------
+
+Determines how the attribute that should be serialized is retrieved from the object.
+
+If you are writing a custom `Field`and need to control exactly which attributes
+of the object are serialized, you will need to override this method.  (For example if you are writing a`datetime` serializer which combines information
+from two seperate `date` and `time` attributes on an object.)
+
+serialize_field(self, obj, field_name)
+--------------------------------------
+
+The main entry point into field serialization, which handles calling `get_field_value` and `serialize`, and ensures the `source` arguemnt is used to determine which attribute to fetch from the object.
+
+You won't typically need to override this method.
 
 
 Serializer methods
@@ -315,39 +432,12 @@ limited to a set of primative python datatypes.  The second step calls the
 `render()` method, which renders that structure into the final output string
 or bytestream.
 
-serialize(self, obj)
---------------------
-
-Returns a native python datatype representing the given object.
-
-If you are writing a custom serializer field, overiding `serialize()` will let
-you customise how the output is generated.
-
-serialize_field_name(self, obj, field_name)
--------------------------------------------
+get_field_key(self, obj, field_name, field)
+--------------------------------------------------
 
 Returns a native python object representing the key for the given field name.
 By default this will be the serializer's `label` if it has one specified,
 or the `field_name` string otherwise.
-
-
-serialize_field_value(self, obj, field_name)
---------------------------------------------
-
-Returns a native python datatype representing the value for the given
-field name.
-
-This will default to calling `serialize()` on the attribute given by
-`getattr(obj, field_name)`, which means it will serialize the given field.
-
-If the `source` argument has been specified, that will be used instead of
-the `field_name` argument.
-
-If you are writing a custom `Serializer` for use as a field and need to control
-exactly which attributes of the object are serialized, you will need to
-override `serialize_field_value()`.  (For example if you are writing a
-`datetime` serializer which combines information from two seperate `date` and
-`time` attributes on an object.)
 
 get_default_field_names(self, obj)
 ----------------------------------
@@ -359,8 +449,9 @@ fields names that will be serialized.
 get_default_field_serializer(self, obj, field_name)
 ---------------------------------------------------
 
-Returns the serializer instance that should be used for a field if there was no
-explicitly declared `Serializer` field for the given `field_name`.
+Returns the Field or Serializer instance that should be used for a field if there was no explicitly declared `Field` for the given `field_name`.  A return value of `None` indicates that the existing class should be used to serialize the field, resulting in nested serialization.
+
+By default this method will call one of `get_flat_serializer()`, `get_recursive_serializer()` or `get_nested_serializer()`.
 
 render(self, data, format, **opts)
 ----------------------------------
@@ -377,6 +468,11 @@ The `data` argument is provided by the return value of the
 
 Changelog
 =========
+
+0.2.0
+-----
+
+* First proper release. Properly working model relationships etc…
 
 0.1.0
 -----
