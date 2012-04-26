@@ -53,6 +53,7 @@ with the existing `dumpdata` serializers.  Need to consider if this is a require
 * dumpdata `xml` support is incomplete - needs to include the field types.  This metadata needs to be stored by the serializer on the keys of it's output, and ignored by 'jsonn' and 'yaml'.
 * I'd like to add `nested.field` syntax to the `include`, `exclude` and `field` argument, to allow quick declarations of nested representations.
 * Add `nested.field` syntax to the `source` argument, to allow quick declarations of serializing nested elements into a flat output structure.
+* source='*' should have the effect of passing through `fields`, `include`, `exclude` to the child field, instead of applying to the parent serializer, so eg. DumpDataSerializer will recognise that those arguments apply to the `fields:` level, rather than referring to what should be included at the root level.
 
 
 Installation
