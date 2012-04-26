@@ -240,6 +240,12 @@ Similarly model and queryset serialization is supported, and handles either flat
         'date_of_birth': datetime.datetime(day=5, month=4, year=1979)
     }
 
+The existing dumpdata format is (mostly) replicated, and gives a good example of how to declare custom serialization styles:
+
+    >>> class DumpDataSerializer(ModelSerializer):
+    >>>     pk = ModelField()
+    >>>     model = ModelNameField()
+    >>>     fields = ModelSerializer(source='*', exclude='id', depth=0)
 
 Field options
 =============
