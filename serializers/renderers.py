@@ -96,7 +96,8 @@ class CSVRenderer(BaseRenderer):
         for item in obj:
             if not writer:
                 writer = DictWriter(stream, item.keys())
-                writer.writeheader()
+                header = dict([(key, key) for key in item.keys()])
+                writer.writerow(header)
             writer.writerow(item)
         return stream.getvalue()
 
