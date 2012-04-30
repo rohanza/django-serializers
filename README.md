@@ -28,7 +28,7 @@ Features:
 * Supports flat serialization, and nested serialization (to arbitrary depth), and handles recursive relationships.
 * Allows for both implicit fields, which are determined at the point of serialization, and explicit fields, which are declared on the serializer class.
 * The declaration of the serialization structure is handled independantly of the final encoding used (eg 'json', 'xml' etc…).  This is desirable for eg. APIs which want to support a given dataset being output to a number of different formats.
-* Currently supports 'json', 'yaml', 'xml'.
+* Currently supports 'json', 'yaml', 'xml', 'csv'.
 * Supports both ordered fields for readablity, and unordered fields for speed.
 * Supports both fields that corrospond to Django model fields, and fields that corrospond to other attributes, such as `get_absolute_url`.
 * Hooks throughout to allow for complete customization.  Eg. Writing key names using javascript style camel casing.
@@ -55,7 +55,8 @@ with the existing `dumpdata` serializers.  Need to consider if this is a require
 * Add `nested.field` syntax to the `source` argument, to allow quick declarations of serializing nested elements into a flat output structure.
 * source='*' should have the effect of passing through `fields`, `include`, `exclude` to the child field, instead of applying to the parent serializer, so eg. DumpDataSerializer will recognise that those arguments apply to the `fields:` level, rather than referring to what should be included at the root level.
 * streaming output, rather than loading all the data into memory.
-* Add `csv` format.
+* Better `csv` format.  (Eg nested fields)
+* Respect `serialize` property on model fields.
 
 
 Installation
@@ -477,6 +478,11 @@ The `data` argument is provided by the return value of the
 
 Changelog
 =========
+
+0.3.0
+-----
+
+* Initial support for CSV.
 
 0.2.0
 -----
