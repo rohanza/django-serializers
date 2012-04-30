@@ -479,6 +479,11 @@ The `data` argument is provided by the return value of the
 Changelog
 =========
 
+0.3.2
+-----
+
+* Fix csv for python 2.6
+
 0.3.1
 -----
 
