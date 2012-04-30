@@ -479,6 +479,11 @@ The `data` argument is provided by the return value of the
 Changelog
 =========
 
+0.3.1
+-----
+
+* Fix import error when yaml not installed
+
 0.3.0
 -----
 

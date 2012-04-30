@@ -9,4 +9,4 @@ from serializers.fields import (
     ModelNameField
 )
 
-__version__ = '0.3.0'
+__version__ = '0.3.1'

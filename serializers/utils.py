@@ -6,7 +6,8 @@ import csv
 try:
     import yaml
 except ImportError:
-    OrderedDumper = None
+    DjangoSafeDumper = None
+    OrderedSafeDumper = None
 else:
     # Adapted from http://pyyaml.org/attachment/ticket/161/use_ordered_dict.py
     class DjangoSafeDumper(yaml.SafeDumper):
