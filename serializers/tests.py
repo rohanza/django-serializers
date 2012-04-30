@@ -535,18 +535,29 @@ class RaceEntry(models.Model):
 
 class TestSimpleModel(TestCase):
     def setUp(self):
-        self.serializer = DumpDataSerializer()
+        self.dumpdata = DumpDataSerializer()
+        self.serializer = Serializer(depth=0)
         RaceEntry.objects.create(
             name='John doe',
             runner_number=6014,
-            start_time=datetime.datetime.now(),
-            finish_time=datetime.datetime.now()
+            start_time=datetime.datetime(year=2012, month=4, day=30, hour=9),
+            finish_time=datetime.datetime(year=2012, month=4, day=30, hour=12, minute=25)
         )
 
     def test_simple_model(self):
         self.assertEquals(
-            self.serializer.encode(RaceEntry.objects.all(), 'json'),
+            self.dumpdata.encode(RaceEntry.objects.all(), 'json'),
             serializers.serialize('json', RaceEntry.objects.all())
+        )
+
+    def test_csv(self):
+        expected = (
+            "finish_time,start_time,id,name,runner_number\r\n"
+            "2012-04-30 12:25:00,2012-04-30 09:00:00,1,John doe,6014\r\n"
+        )
+        self.assertEquals(
+            self.serializer.encode(RaceEntry.objects.all(), 'csv'),
+            expected
         )
 
 

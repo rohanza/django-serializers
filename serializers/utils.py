@@ -1,4 +1,6 @@
+# -*- coding: utf-8 -*-
 from django.utils.datastructures import SortedDict
+import csv
 
 
 try:
@@ -40,3 +42,43 @@ else:
 
     OrderedSafeDumper.add_representer(SortedDict,
             yaml.representer.SafeRepresenter.represent_dict)
+
+
+class DictWriter(csv.DictWriter):
+    """
+    >>> from cStringIO import StringIO
+    >>> f = StringIO()
+    >>> w = DictWriter(f, ['a', 'b'], restval=u'î')
+    >>> w.writerow({'a':'1'})
+    >>> w.writerow({'a':'1', 'b':u'ø'})
+    >>> w.writerow({'a':u'é'})
+    >>> f.seek(0)
+    >>> r = DictReader(f, fieldnames=['a'], restkey='r')
+    >>> r.next() == {'a':u'1', 'r':[u"î"]}
+    True
+    >>> r.next() == {'a':u'1', 'r':[u"ø"]}
+    True
+    >>> r.next() == {'a':u'é', 'r':[u"î"]}
+    """
+    def __init__(self, csvfile, fieldnames, restval='', extrasaction='raise', dialect='excel', encoding='utf-8', *args, **kwds):
+        self.fieldnames = fieldnames
+        self.encoding = encoding
+        self.restval = restval
+        self.writer = csv.DictWriter(csvfile, fieldnames, restval, extrasaction, dialect, *args, **kwds)
+
+    def _stringify(self, s, encoding):
+        if type(s) == unicode:
+            return s.encode(encoding)
+        elif isinstance(s, (int, float)):
+            pass  # let csv.QUOTE_NONNUMERIC do its thing.
+        elif type(s) != str:
+            s = str(s)
+        return s
+
+    def writerow(self, d):
+        for fieldname in self.fieldnames:
+            if fieldname in d:
+                d[fieldname] = self._stringify(d[fieldname], self.encoding)
+            else:
+                d[fieldname] = self._stringify(self.restval, self.encoding)
+        self.writer.writerow(d)

@@ -4,7 +4,12 @@ import copy
 import datetime
 import inspect
 import types
-from serializers.renderers import (JSONRenderer, YAMLRenderer, XMLRenderer)
+from serializers.renderers import (
+    JSONRenderer,
+    YAMLRenderer,
+    XMLRenderer,
+    CSVRenderer
+)
 from serializers.fields import *
 
 
@@ -71,7 +76,8 @@ class BaseSerializer(Field):
     renderer_classes = {
         'xml': XMLRenderer,
         'json': JSONRenderer,
-        'yaml': YAMLRenderer
+        'yaml': YAMLRenderer,
+        'csv': CSVRenderer,
     }
 
     def __init__(self, **kwargs):

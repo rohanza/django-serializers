@@ -2,7 +2,7 @@ from django.core.serializers.json import DateTimeAwareJSONEncoder
 from django.utils import simplejson as json
 from django.utils.encoding import smart_unicode
 from django.utils.xmlutils import SimplerXMLGenerator
-from serializers.utils import DjangoSafeDumper, OrderedSafeDumper
+from serializers.utils import DjangoSafeDumper, OrderedSafeDumper, DictWriter
 import StringIO
 try:
     import yaml
@@ -86,6 +86,19 @@ class XMLRenderer(BaseRenderer):
         else:
             xml.characters(smart_unicode(data))
 
+
+class CSVRenderer(BaseRenderer):
+    def render(self, obj, **opts):
+        if not hasattr(obj, '__iter__'):
+            obj = [obj]
+        stream = StringIO.StringIO()
+        writer = None
+        for item in obj:
+            if not writer:
+                writer = DictWriter(stream, item.keys())
+                writer.writeheader()
+            writer.writerow(item)
+        return stream.getvalue()
 
 if not yaml:
     YAMLRenderer = None
