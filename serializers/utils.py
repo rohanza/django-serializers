@@ -76,6 +76,10 @@ class DictWriter(csv.DictWriter):
             s = str(s)
         return s
 
+    def writeheader(self):
+        header = dict([(item, item) for item in self.fieldnames])
+        self.writerow(header)
+
     def writerow(self, d):
         for fieldname in self.fieldnames:
             if fieldname in d:
