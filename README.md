@@ -412,6 +412,22 @@ The class that should be used for serializing fields when a recursion occurs.
 Default is `None`, which indicates that it should fall back to whatever is
 set for `flat_field`.
 
+ModelSerializer Options
+=======================
+
+The ModelSerializer supports all the options for Serializer, as well as
+one other:
+
+model_fields
+------------
+
+A list of model field types that should be serialized.  Available options are:
+'pk', 'fields', 'many_to_many', 'local_fields', 'local_many_to_many'.
+The default value is ('pk', 'fields', 'many_to_many').
+
+The DumpDataSerializer uses a different set of fields, in order to correctly
+deal with model inheritance.
+
 Field methods
 =============
 

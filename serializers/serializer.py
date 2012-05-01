@@ -70,6 +70,12 @@ class SerializerOptions(object):
         self.nested_field = _get_option('nested_field', kwargs, meta, None)
 
 
+class ModelSerializerOptions(SerializerOptions):
+    def __init__(self, meta, **kwargs):
+        super(ModelSerializerOptions, self).__init__(meta, **kwargs)
+        self.model_fields = _get_option('model_fields', kwargs, meta, None)
+
+
 class SerializerMetaclass(type):
     def __new__(cls, name, bases, attrs):
         attrs['base_fields'] = _get_declared_fields(bases, attrs)
@@ -87,13 +93,15 @@ class BaseSerializer(Field):
         'csv': CSVRenderer,
     }
 
+    options_class = SerializerOptions
+
     def __init__(self, **kwargs):
         source = kwargs.get('source', None)
         label = kwargs.get('label', None)
         serialize = kwargs.get('serialize', None)
         super(BaseSerializer, self).__init__(source=source, label=label, serialize=serialize)
 
-        self.opts = SerializerOptions(self.Meta, **kwargs)
+        self.opts = self.options_class(self.Meta, **kwargs)
         self.stack = []
         self.fields = SortedDict((key, copy.copy(field))
                            for key, field in self.base_fields.items())
@@ -238,11 +246,26 @@ class ModelSerializer(Serializer):
     """
     A serializer that deals with model instances and querysets.
     """
+    options_class = ModelSerializerOptions
+
     class Meta:
         flat_field = ModelField
+        model_fields = ('pk', 'fields', 'many_to_many')
 
     def get_default_field_names(self, obj):
-        fields = obj._meta.fields + obj._meta.many_to_many
+        fields = []
+        concrete_model = obj._meta.concrete_model
+
+        for field_type in self.opts.model_fields:
+            if field_type == 'pk':
+                fields.append(concrete_model._meta.pk)
+            else:
+                fields.extend([
+                    field for field in
+                    getattr(concrete_model._meta, field_type)
+                    if field.serialize
+                ])
+
         return [field.name for field in fields]
 
     def serialize(self, obj):
@@ -264,4 +287,6 @@ class DumpDataSerializer(ModelSerializer):
 
     pk = ModelField()
     model = ModelNameField()
-    fields = ModelSerializer(source='*', exclude='id', depth=0)
+    fields = ModelSerializer(
+        source='*', depth=0, model_fields=('local_fields', 'many_to_many')
+    )

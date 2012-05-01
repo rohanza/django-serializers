@@ -561,6 +561,32 @@ class TestSimpleModel(TestCase):
         )
 
 
+##### Model Inheritance #####
+
+class Account(models.Model):
+    points = models.PositiveIntegerField()
+    company = models.CharField(max_length=100)
+
+
+class PremiumAccount(Account):
+    date_upgraded = models.DateTimeField()
+
+
+class TestModelInheritance(TestCase):
+    def setUp(self):
+        self.dumpdata = DumpDataSerializer()
+        PremiumAccount.objects.create(
+            points=42,
+            company='Foozle Inc.',
+            date_upgraded=datetime.datetime(year=2012, month=4, day=30, hour=9)
+        )
+
+    def test_child_model(self):
+        self.assertEquals(
+            self.dumpdata.encode(PremiumAccount.objects.all(), 'json'),
+            serializers.serialize('json', PremiumAccount.objects.all())
+        )
+
 ##### One to one relationships #####
 
 class User(models.Model):
