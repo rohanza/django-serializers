@@ -49,18 +49,25 @@ def _get_declared_fields(bases, attrs):
     return SortedDict(fields)
 
 
+def _get_option(name, kwargs, meta, default):
+    return kwargs.get(name, getattr(meta, name, default))
+
+
 class SerializerOptions(object):
     def __init__(self, meta, **kwargs):
-        self.depth = kwargs.get('depth', getattr(meta, 'depth', None))
-        self.include = kwargs.get('include', getattr(meta, 'include', ()))
-        self.exclude = kwargs.get('exclude', getattr(meta, 'exclude', ()))
-        self.fields = kwargs.get('fields', getattr(meta, 'fields', ()))
-        self.include_default_fields = kwargs.get('include_default_fields',
-            getattr(meta, 'include_default_fields', False)
+        self.depth = _get_option('depth', kwargs, meta, None)
+        self.include = _get_option('include', kwargs, meta, ())
+        self.exclude = _get_option('exclude', kwargs, meta, ())
+        self.fields = _get_option('fields', kwargs, meta, ())
+        self.include_default_fields = _get_option(
+            'include_default_fields', kwargs, meta, False
         )
-        self.preserve_field_order = kwargs.get('preserve_field_order',
-            getattr(meta, 'preserve_field_order', False)
+        self.preserve_field_order = _get_option(
+            'preserve_field_order', kwargs, meta, False
         )
+        self.flat_field = _get_option('flat_field', kwargs, meta, Field)
+        self.recursive_field = _get_option('recursive_field', kwargs, meta, None)
+        self.nested_field = _get_option('nested_field', kwargs, meta, None)
 
 
 class SerializerMetaclass(type):
@@ -92,13 +99,13 @@ class BaseSerializer(Field):
                            for key, field in self.base_fields.items())
 
     def get_flat_serializer(self):
-        return Field()
+        return self.opts.flat_field()
 
     def get_recursive_serializer(self):
-        return self.get_flat_serializer()
+        return (self.opts.recursive_field or self.opts.flat_field)()
 
     def get_nested_serializer(self):
-        return self.__class__()
+        return (self.opts.nested_field or self.__class__)()
 
     def _is_protected_type(self, obj):
         """
@@ -231,8 +238,8 @@ class ModelSerializer(Serializer):
     """
     A serializer that deals with model instances and querysets.
     """
-    def get_flat_serializer(self):
-        return ModelField()
+    class Meta:
+        flat_field = ModelField
 
     def get_default_field_names(self, obj):
         fields = obj._meta.fields + obj._meta.many_to_many
