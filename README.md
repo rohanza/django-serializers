@@ -392,6 +392,25 @@ preserve_field_ordering
 If set to `True`, objects will be serialized using ordered dictionaries,
 which preserve the ordering that the fields are declared in.
 
+flat_field
+----------
+
+The class that should be used for serializing flat fields.  (ie. Once the
+specified `depth` has been reached.)  Default is `Field`.
+
+nested_field
+------------
+
+The class that should be used for serializing nested fields.  (ie Before the
+specified `depth` has been reached.)  Default is `None`, which indicate that
+the serializer should use another instance of it's own class.
+
+recursive_field
+---------------
+
+The class that should be used for serializing fields when a recursion occurs.
+Default is `None`, which indicates that it should fall back to whatever is
+set for `flat_field`.
 
 Field methods
 =============
