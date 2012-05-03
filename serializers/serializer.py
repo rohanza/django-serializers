@@ -74,6 +74,7 @@ class ModelSerializerOptions(SerializerOptions):
     def __init__(self, meta, **kwargs):
         super(ModelSerializerOptions, self).__init__(meta, **kwargs)
         self.model_fields = _get_option('model_fields', kwargs, meta, None)
+        self.related_field = _get_option('related_field', kwargs, meta, ModelPKField)
 
 
 class SerializerMetaclass(type):
@@ -106,13 +107,13 @@ class BaseSerializer(Field):
         self.fields = SortedDict((key, copy.copy(field))
                            for key, field in self.base_fields.items())
 
-    def get_flat_serializer(self):
+    def get_flat_serializer(self, obj, field_name):
         return self.opts.flat_field()
 
-    def get_recursive_serializer(self):
+    def get_recursive_serializer(self, obj, field_name):
         return (self.opts.recursive_field or self.opts.flat_field)()
 
-    def get_nested_serializer(self):
+    def get_nested_serializer(self, obj, field_name):
         return (self.opts.nested_field or self.__class__)()
 
     def _is_protected_type(self, obj):
@@ -175,8 +176,8 @@ class BaseSerializer(Field):
         default serializer instance that should be used for that field.
         """
         if self.opts.depth is not None and self.opts.depth <= 0:
-            return self.get_flat_serializer()
-        return self.get_nested_serializer()
+            return self.get_flat_serializer(obj, field_name)
+        return self.get_nested_serializer(obj, field_name)
 
     def get_field_key(self, obj, field_name, field):
         if getattr(field, 'label', None):
@@ -200,7 +201,8 @@ class BaseSerializer(Field):
 
     def serialize_object(self, obj):
         if self.source != '*' and obj in self.stack:
-            serializer = self.get_recursive_serializer()
+            serializer = self.get_recursive_serializer(self.orig_obj,
+                                                       self.orig_field_name)
             return serializer.serialize_field(self.orig_obj,
                                               self.orig_field_name,
                                               self)
@@ -249,7 +251,7 @@ class ModelSerializer(Serializer):
     options_class = ModelSerializerOptions
 
     class Meta:
-        flat_field = ModelField
+        related_field = ModelPKField
         model_fields = ('pk', 'fields', 'many_to_many')
 
     def get_default_field_names(self, obj):
@@ -273,6 +275,21 @@ class ModelSerializer(Serializer):
 
         return [field.name for field in fields]
 
+    def get_related_serializer(self, obj, field_name):
+        return self.opts.related_field()
+
+    def get_flat_serializer(self, obj, field_name):
+        field = obj._meta.get_field_by_name(field_name)[0]
+        if isinstance(field, RelatedObject) or field.rel:
+            return self.get_related_serializer(obj, field_name)
+        return super(ModelSerializer, self).get_flat_serializer(obj, field_name)
+
+    def get_recursive_serializer(self, obj, field_name):
+        field = obj._meta.get_field_by_name(field_name)[0]
+        if isinstance(field, RelatedObject) or field.rel:
+            return self.get_related_serializer(obj, field_name)
+        return super(ModelSerializer, self).get_recursive_serializer(obj, field_name)
+
     def serialize(self, obj):
         if self._is_protected_type(obj):
             return obj
@@ -290,7 +307,7 @@ class DumpDataSerializer(ModelSerializer):
     A serializer that is intended to produce dumpdata formatted structures.
     """
 
-    pk = ModelField()
+    pk = ModelPKField()
     model = ModelNameField()
     fields = ModelSerializer(
         source='*', depth=0, model_fields=('local_fields', 'many_to_many')

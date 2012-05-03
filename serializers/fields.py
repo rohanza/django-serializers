@@ -42,9 +42,9 @@ class Field(object):
         return self.serialize(obj)
 
 
-class ModelField(Field):
+class ModelPKField(Field):
     """
-    Serializes the model instance field to a flat value.
+    Serializes a model related field or related manager to a pk value.
     """
     def serialize(self, obj):
         return obj
