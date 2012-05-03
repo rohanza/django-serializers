@@ -258,8 +258,13 @@ class ModelSerializer(Serializer):
 
         for field_type in self.opts.model_fields:
             if field_type == 'pk':
-                fields.append(concrete_model._meta.pk)
+                # Add pk field, descending into inherited pk if needed
+                pk_field = concrete_model._meta.pk
+                while pk_field.rel:
+                    pk_field = pk_field.rel.to._meta.pk
+                fields.append(pk_field)
             else:
+                # Add any non-pk field types
                 fields.extend([
                     field for field in
                     getattr(concrete_model._meta, field_type)

@@ -38,9 +38,6 @@ Features:
 Still to do:
 
 * Add natural key support to DumpDataSerializer.
-* Add hooks to control which types of model field get serialized by default.  (eg base fields, m2m fields etc…)
-* Ensure DumpDataSerializer only serializes base fields, not inherited fields.  (And vice-versa for ModelSerializer)
-* Add simple hooks for which field classes should be used by default.  (Eg `flat_field=`, `nested_field=` attributes in `Serializer.Meta`)
 * Tests for non-numeric FKs, and FKs with a custom db implementation.
 * Tests for many2many FKs with a 'through' model.
 * Consider ordering by natural key dependancies for DumpDataSerializer.  
@@ -49,14 +46,23 @@ the existing `loaddata` deserialization with a more flexible deserialization
 API is considered out of scope, until the serialization API has first been adequatly addressed.
 * `django-serializers` current does not provide an API that is backwards compatible
 with the existing `dumpdata` serializers.  Need to consider if this is a requirement.  Eg. would this be a replacement to the existing serializers, or an addition to them?
-* The base `Field` instances need to be copied on `Serializer` instatiation.  Right now there's some shared state that needs to disappear.
 * dumpdata `xml` support is incomplete - needs to include the field types.  This metadata needs to be stored by the serializer on the keys of it's output, and ignored by 'jsonn' and 'yaml'.
 * I'd like to add `nested.field` syntax to the `include`, `exclude` and `field` argument, to allow quick declarations of nested representations.
 * Add `nested.field` syntax to the `source` argument, to allow quick declarations of serializing nested elements into a flat output structure.
 * source='*' should have the effect of passing through `fields`, `include`, `exclude` to the child field, instead of applying to the parent serializer, so eg. DumpDataSerializer will recognise that those arguments apply to the `fields:` level, rather than referring to what should be included at the root level.
 * streaming output, rather than loading all the data into memory.
 * Better `csv` format.  (Eg nested fields)
+* Tests for proxy models.
+* Consider character encoding issues.
+* `stack` needs to be reverted at start of new serialization.
+
+Done:
+
+* Add hooks to control which types of model field get serialized by default.  (eg base fields, m2m fields etc…)
+* Add simple hooks for which field classes should be used by default.  (Eg `flat_field=`, `nested_field=` attributes in `Serializer.Meta`)
 * Respect `serialize` property on model fields.
+* Handle multiple model inheritance correctly for ModelSerializer and DumpDataSerializer.
+* The base `Field` instances need to be copied on `Serializer` instatiation.  Right now there's some shared state that needs to disappear.
 
 
 Installation

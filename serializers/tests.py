@@ -575,17 +575,31 @@ class PremiumAccount(Account):
 class TestModelInheritance(TestCase):
     def setUp(self):
         self.dumpdata = DumpDataSerializer()
+        self.serializer = ModelSerializer()
         PremiumAccount.objects.create(
             points=42,
             company='Foozle Inc.',
             date_upgraded=datetime.datetime(year=2012, month=4, day=30, hour=9)
         )
 
-    def test_child_model(self):
+    def test_dumpdata_child_model(self):
         self.assertEquals(
             self.dumpdata.encode(PremiumAccount.objects.all(), 'json'),
             serializers.serialize('json', PremiumAccount.objects.all())
         )
+
+    def test_serialize_child_model(self):
+        expected = [{
+            'id': 1,
+            'points': 42,
+            'company': 'Foozle Inc.',
+            'date_upgraded': datetime.datetime(2012, 4, 30, 9, 0)
+        }]
+        self.assertEquals(
+            self.serializer.serialize(PremiumAccount.objects.all()),
+            expected
+        )
+
 
 ##### One to one relationships #####
 
