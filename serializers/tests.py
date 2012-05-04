@@ -603,44 +603,44 @@ class TestModelInheritance(TestCase):
 
 # ##### Natural Keys #####
 
-# class PetOwner(models.Model):
-#     first_name = models.CharField(max_length=100)
-#     last_name = models.CharField(max_length=100)
-#     birthdate = models.DateField()
+class PetOwner(models.Model):
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    birthdate = models.DateField()
 
-#     def natural_key(self):
-#         return (self.first_name, self.last_name)
+    def natural_key(self):
+        return (self.first_name, self.last_name)
 
-#     class Meta:
-#         unique_together = (('first_name', 'last_name'),)
-
-
-# class Pet(models.Model):
-#     name = models.CharField(max_length=100)
-#     owner = models.ForeignKey(PetOwner)
+    class Meta:
+        unique_together = (('first_name', 'last_name'),)
 
 
-# class TestNaturalKey(TestCase):
-#     """
-#     Test one-to-one field relationship on a model.
-#     """
-#     def setUp(self):
-#         self.dumpdata = DumpDataSerializer()
-#         joe = PetOwner.objects.create(
-#             first_name='joe',
-#             last_name='adams',
-#             birthdate=datetime.date(year=1965, month=8, day=27)
-#         )
-#         Pet.objects.create(
-#             owner=joe,
-#             name='splash gordon'
-#         )
+class Pet(models.Model):
+    name = models.CharField(max_length=100)
+    owner = models.ForeignKey(PetOwner)
 
-#     def test_onetoone_dumpdata_json(self):
-#         self.assertEquals(
-#             self.dumpdata.encode(Pet.objects.all(), 'json', use_natural_keys=True),
-#             serializers.serialize('json', Pet.objects.all(), use_natural_keys=True)
-#         )
+
+class TestNaturalKey(TestCase):
+    """
+    Test one-to-one field relationship on a model.
+    """
+    def setUp(self):
+        self.dumpdata = DumpDataSerializer()
+        joe = PetOwner.objects.create(
+            first_name='joe',
+            last_name='adams',
+            birthdate=datetime.date(year=1965, month=8, day=27)
+        )
+        Pet.objects.create(
+            owner=joe,
+            name='splash gordon'
+        )
+
+    def test_onetoone_dumpdata_json(self):
+        self.assertEquals(
+            self.dumpdata.encode(Pet.objects.all(), 'json', use_natural_keys=True),
+            serializers.serialize('json', Pet.objects.all(), use_natural_keys=True)
+        )
 
 
 ##### One to one relationships #####

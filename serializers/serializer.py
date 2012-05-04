@@ -111,7 +111,9 @@ class BaseSerializer(Field):
         return self.opts.flat_field()
 
     def get_recursive_serializer(self, obj, field_name):
-        return (self.opts.recursive_field or self.opts.flat_field)()
+        if self.opts.recursive_field:
+            return self.opts.recursive_field()
+        return self.get_flat_serializer(obj, field_name)
 
     def get_nested_serializer(self, obj, field_name):
         return (self.opts.nested_field or self.__class__)()
@@ -285,13 +287,7 @@ class ModelSerializer(Serializer):
         field = obj._meta.get_field_by_name(field_name)[0]
         if isinstance(field, RelatedObject) or field.rel:
             return self.get_related_serializer(obj, field_name)
-        return super(ModelSerializer, self).get_flat_serializer(obj, field_name)
-
-    def get_recursive_serializer(self, obj, field_name):
-        field = obj._meta.get_field_by_name(field_name)[0]
-        if isinstance(field, RelatedObject) or field.rel:
-            return self.get_related_serializer(obj, field_name)
-        return super(ModelSerializer, self).get_recursive_serializer(obj, field_name)
+        return self.opts.flat_field()
 
     def serialize(self, obj):
         if self._is_protected_type(obj):
@@ -315,3 +311,12 @@ class DumpDataSerializer(ModelSerializer):
     fields = ModelSerializer(
         source='*', depth=0, model_fields=('local_fields', 'many_to_many')
     )
+
+    def encode(self, obj, format=None, **opts):
+        if opts.get('use_natural_keys', None):
+            self.fields['fields'] = ModelSerializer(
+                source='*', depth=0,
+                model_fields=('local_fields', 'many_to_many'),
+                related_field=NaturalKeyRelatedField
+            )
+        return super(DumpDataSerializer, self).encode(obj, format, **opts)

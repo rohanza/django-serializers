@@ -16,9 +16,11 @@ serialization.  It should be able to support the current `dumpdata` format,
 whilst also being easy to override and customise.
 
 Serializers are declared in a simlar format to `Form` and `Model` declarations,
-with an inner `Meta` class providing general options, and optionally with a set of `Field` classes being declaring inside the `Serializer` class.
+with an inner `Meta` class providing general options, and optionally with a set
+of `Field` classes being declaring inside the `Serializer` class.
 
-The `Serializer` class itself also implements the `Field` interface, meaning we can represent serialization of nested instances in various different ways. 
+The `Serializer` class itself also implements the `Field` interface, meaning we
+can represent serialization of nested instances in various different ways.
 
 Features:
 
@@ -31,16 +33,17 @@ Features:
 * Currently supports 'json', 'yaml', 'xml', 'csv'.
 * Supports both ordered fields for readablity, and unordered fields for speed.
 * Supports both fields that corrospond to Django model fields, and fields that corrospond to other attributes, such as `get_absolute_url`.
+* Supports relations serializing to primary keys, natural keys, or custom implementations.
 * Hooks throughout to allow for complete customization.  Eg. Writing key names using javascript style camel casing.
 * Simple, clean API.
 * Comprehensive test suite.
 
 Still to do:
 
-* Add natural key support to DumpDataSerializer.
+* More tests for natural key support.
 * Tests for non-numeric FKs, and FKs with a custom db implementation.
 * Tests for many2many FKs with a 'through' model.
-* Consider ordering by natural key dependancies for DumpDataSerializer.  
+* Tests for proxy models.
 * `django-serializers` currently does not address deserialization.  Replacing
 the existing `loaddata` deserialization with a more flexible deserialization
 API is considered out of scope, until the serialization API has first been adequatly addressed.
@@ -52,9 +55,10 @@ with the existing `dumpdata` serializers.  Need to consider if this is a require
 * source='*' should have the effect of passing through `fields`, `include`, `exclude` to the child field, instead of applying to the parent serializer, so eg. DumpDataSerializer will recognise that those arguments apply to the `fields:` level, rather than referring to what should be included at the root level.
 * streaming output, rather than loading all the data into memory.
 * Better `csv` format.  (Eg nested fields)
-* Tests for proxy models.
 * Consider character encoding issues.
 * `stack` needs to be reverted at start of new serialization.
+* Performance testing.
+* Remove ordered keys / unordered keys from public interface.  Always on for ModelSerializer, always off for DumpDataSerializer.
 
 Done:
 
@@ -63,6 +67,7 @@ Done:
 * Respect `serialize` property on model fields.
 * Handle multiple model inheritance correctly for ModelSerializer and DumpDataSerializer.
 * The base `Field` instances need to be copied on `Serializer` instatiation.  Right now there's some shared state that needs to disappear.
+* Add natural key support to DumpDataSerializer.
 
 
 Installation
@@ -151,7 +156,8 @@ exclude existing attributes:
         'age': 42
     }
 
-To explicitly define how the object fields should be serialized, we declare those fields on the serializer class:
+To explicitly define how the object fields should be serialized, we declare
+those fields on the serializer class:
 
     >>> class PersonSerializer(Serializer):
     >>>    first_name = Field(label='First name')
@@ -229,7 +235,9 @@ And handles flat serialization of objects:
         ]
     }
 
-Similarly model and queryset serialization is supported, and handles either flat or nested serialization of foreign keys, many to many relationships, and one to one relationships, plus reverse relationships:
+Similarly model and queryset serialization is supported, and handles either
+flat or nested serialization of foreign keys, many to many relationships, and
+one to one relationships, plus reverse relationships:
 
     >>> class User(models.Model):
     >>>     email = models.EmailField()
@@ -250,7 +258,8 @@ Similarly model and queryset serialization is supported, and handles either flat
         'date_of_birth': datetime.datetime(day=5, month=4, year=1979)
     }
 
-The existing dumpdata format is (mostly) replicated, and gives a good example of how to declare custom serialization styles:
+The existing dumpdata format is (mostly) replicated, and gives a good example
+of how to declare custom serialization styles:
 
     >>> class DumpDataSerializer(ModelSerializer):
     >>>     pk = ModelField()
@@ -415,8 +424,8 @@ recursive_field
 ---------------
 
 The class that should be used for serializing fields when a recursion occurs.
-Default is `None`, which indicates that it should fall back to whatever is
-set for `flat_field`.
+Default is `None`, which indicates that it should fall back to using a flat
+field representation.
 
 ModelSerializer Options
 =======================
@@ -429,6 +438,7 @@ related_field
 
 The class that should be used for serializing related model fields once
 the maximum depth has been reached, or recursion occurs.
+
 `related_field` can be applied to `OneToOneField`, `ForeignKey`,
 `ManyToManyField`, or any of their corrosponding reverse managers.
 Default is `PrimaryKeyRelatedField`.
