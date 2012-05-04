@@ -41,10 +41,34 @@ class Field(object):
         return smart_unicode(obj)
 
 
-class ModelPKField(Field):
+class RelatedField(Field):
+    """
+    A base class for model related fields or related managers.
+    Subclass this and override `serialize` to define custom behaviour when
+    serializing related objects.
+    """
+
+    def serialize_field(self, obj, field_name):
+        obj = getattr(obj, field_name)
+        if obj.__class__.__name__ in ('RelatedManager', 'ManyRelatedManager'):
+            return [self.serialize(item) for item in obj.all()]
+        return self.serialize(obj)
+
+
+class PrimaryKeyRelatedField(Field):
     """
     Serializes a model related field or related manager to a pk value.
     """
+
+    # Note the we don't inherit from ModelRelatedField's implementation,
+    # as we want to get the raw database value directly.
+    #
+    # An alternative implementation would simply be this...
+    #
+    # class PrimaryKeyRelatedField(RelatedField):
+    #     def serialize(self, obj):
+    #         return obj.pk
+
     def serialize_field(self, obj, field_name):
         try:
             obj = obj.serializable_value(field_name)
@@ -59,6 +83,11 @@ class ModelPKField(Field):
         if obj.__class__.__name__ == 'ManyRelatedManager':
             return [item.pk for item in obj.all()]
         return obj
+
+
+class NaturalKeyRelatedField(RelatedField):
+    def serialize(self, obj):
+        return obj.natural_key()
 
 
 class ModelNameField(Field):

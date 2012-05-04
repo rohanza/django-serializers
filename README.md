@@ -408,7 +408,7 @@ nested_field
 ------------
 
 The class that should be used for serializing nested fields.  (ie Before the
-specified `depth` has been reached.)  Default is `None`, which indicate that
+specified `depth` has been reached.)  Default is `None`, which indicates that
 the serializer should use another instance of it's own class.
 
 recursive_field
@@ -431,17 +431,17 @@ The class that should be used for serializing related model fields once
 the maximum depth has been reached, or recursion occurs.
 `related_field` can be applied to `OneToOneField`, `ForeignKey`,
 `ManyToManyField`, or any of their corrosponding reverse managers.
-Default is `ModelPKField`.
+Default is `PrimaryKeyRelatedField`.
 
 model_fields
 ------------
 
-A list of model field types that should be serialized.  Available options are:
-'pk', 'fields', 'many_to_many', 'local_fields', 'local_many_to_many'.
-The default value is ('pk', 'fields', 'many_to_many').
+A list of model field types that should be serialized by default.
+Available options are: 'pk', 'fields', 'many_to_many', 'local_fields',
+'local_many_to_many'.  The default value is ('pk', 'fields', 'many_to_many').
 
-The DumpDataSerializer uses a different set of fields, in order to correctly
-deal with model inheritance.
+Note that the DumpDataSerializer uses a slightly different set of fields, in
+order to correctly deal with it's particular requirements.
 
 Field methods
 =============
@@ -495,7 +495,7 @@ limited to a set of primative python datatypes.  The second step calls the
 or bytestream.
 
 get_field_key(self, obj, field_name, field)
---------------------------------------------------
+-------------------------------------------
 
 Returns a native python object representing the key for the given field name.
 By default this will be the serializer's `label` if it has one specified,

@@ -74,7 +74,7 @@ class ModelSerializerOptions(SerializerOptions):
     def __init__(self, meta, **kwargs):
         super(ModelSerializerOptions, self).__init__(meta, **kwargs)
         self.model_fields = _get_option('model_fields', kwargs, meta, None)
-        self.related_field = _get_option('related_field', kwargs, meta, ModelPKField)
+        self.related_field = _get_option('related_field', kwargs, meta, PrimaryKeyRelatedField)
 
 
 class SerializerMetaclass(type):
@@ -251,7 +251,7 @@ class ModelSerializer(Serializer):
     options_class = ModelSerializerOptions
 
     class Meta:
-        related_field = ModelPKField
+        related_field = PrimaryKeyRelatedField
         model_fields = ('pk', 'fields', 'many_to_many')
 
     def get_default_field_names(self, obj):
@@ -307,7 +307,7 @@ class DumpDataSerializer(ModelSerializer):
     A serializer that is intended to produce dumpdata formatted structures.
     """
 
-    pk = ModelPKField()
+    pk = Field()
     model = ModelNameField()
     fields = ModelSerializer(
         source='*', depth=0, model_fields=('local_fields', 'many_to_many')

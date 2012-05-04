@@ -5,7 +5,9 @@ from serializers.serializer import (
 )
 from serializers.fields import (
     Field,
-    ModelPKField,
+    RelatedField,
+    PrimaryKeyRelatedField,
+    NaturalKeyRelatedField,
     ModelNameField
 )
 
