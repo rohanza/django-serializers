@@ -3,7 +3,7 @@ from django.core import serializers
 from django.db import models
 from django.test import TestCase
 from serializers import Serializer, ModelSerializer, DumpDataSerializer
-from serializers.fields import Field
+from serializers.fields import Field, NaturalKeyRelatedField
 
 
 class ExampleObject(object):
@@ -617,7 +617,10 @@ class PetOwner(models.Model):
 
 class Pet(models.Model):
     name = models.CharField(max_length=100)
-    owner = models.ForeignKey(PetOwner)
+    owner = models.ForeignKey(PetOwner, related_name='pets')
+
+    def natural_key(self):
+        return self.name
 
 
 class TestNaturalKey(TestCase):
@@ -635,11 +638,64 @@ class TestNaturalKey(TestCase):
             owner=joe,
             name='splash gordon'
         )
+        Pet.objects.create(
+            owner=joe,
+            name='frogger'
+        )
 
-    def test_onetoone_dumpdata_json(self):
+    def test_naturalkey_dumpdata(self):
+        """
+        Ensure that we can replicate the existing dumpdata
+        'use_natural_keys' behaviour.
+        """
         self.assertEquals(
             self.dumpdata.encode(Pet.objects.all(), 'json', use_natural_keys=True),
             serializers.serialize('json', Pet.objects.all(), use_natural_keys=True)
+        )
+
+    def test_naturalkey(self):
+        """
+        Ensure that we can use NaturalKeyRelatedField to represent foreign
+        key relationships.
+        """
+        serializer = ModelSerializer(
+            related_field=NaturalKeyRelatedField,
+            depth=0
+        )
+        expected = [{
+            "owner": (u"joe", u"adams"),  # NK, not PK
+            "id": 1,
+            "name": u"splash gordon"
+        }, {
+            "owner": (u"joe", u"adams"),  # NK, not PK
+            "id": 2,
+            "name": u"frogger"
+        }]
+        self.assertEquals(
+            serializer.serialize(Pet.objects.all()),
+            expected
+        )
+
+    def test_naturalkey_reverse_relation(self):
+        """
+        Ensure that we can use NaturalKeyRelatedField to represent
+        reverse foreign key relationships.
+        """
+        serializer = ModelSerializer(
+            include=('pets',),
+            related_field=NaturalKeyRelatedField,
+            depth=0
+        )
+        expected = [{
+            "first_name": u"joe",
+            "last_name": u"adams",
+            "id": 1,
+            "birthdate": datetime.date(1965, 8, 27),
+            "pets": [u"splash gordon", u"frogger"]  # NK, not PK
+        }]
+        self.assertEquals(
+            serializer.serialize(PetOwner.objects.all()),
+            expected
         )
 
 
