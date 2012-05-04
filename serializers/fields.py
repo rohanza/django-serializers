@@ -13,6 +13,23 @@ class Field(object):
         self.creation_counter = Field.creation_counter
         Field.creation_counter += 1
 
+    def _serialize_field(self, obj, field_name, parent):
+        """
+        The entry point into a field, as called by it's parent serializer.
+        """
+        if self.source == '*':
+            return self.serialize(obj)
+
+        field_name = self.source or field_name
+        return self.serialize_field(obj, field_name)
+
+    def serialize_field(self, obj, field_name):
+        """
+        Given the parent object and the field name, returns the field value
+        that should be serialized.
+        """
+        return self.serialize(getattr(obj, field_name))
+
     def serialize(self, obj):
         """
         Serializes the field's value into it's simple representation.
@@ -23,33 +40,12 @@ class Field(object):
             return [self.serialize(item) for item in obj]
         return smart_unicode(obj)
 
-    def get_field_value(self, obj, field_name):
-        """
-        Given the parent object and the field name, returns the field value
-        that should be serialized.
-        """
-        return getattr(obj, field_name)
-
-    def serialize_field(self, obj, field_name, parent):
-        """
-        The entry point into a field, as called by it's parent serializer.
-        """
-        if self.source == '*':
-            return self.serialize(obj)
-
-        field_name = self.source or field_name
-        obj = self.get_field_value(obj, field_name)
-        return self.serialize(obj)
-
 
 class ModelPKField(Field):
     """
     Serializes a model related field or related manager to a pk value.
     """
-    def serialize(self, obj):
-        return obj
-
-    def get_field_value(self, obj, field_name):
+    def serialize_field(self, obj, field_name):
         try:
             obj = obj.serializable_value(field_name)
         except AttributeError:
@@ -69,8 +65,5 @@ class ModelNameField(Field):
     """
     Serializes the model instance's model name.  Eg. 'auth.User'.
     """
-    def serialize(self, obj):
+    def serialize_field(self, obj, field_name):
         return smart_unicode(obj._meta)
-
-    def get_field_value(self, obj, field_name):
-        return obj

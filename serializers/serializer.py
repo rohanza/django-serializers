@@ -184,7 +184,7 @@ class BaseSerializer(Field):
             return field.label
         return field_name
 
-    def serialize_field(self, obj, field_name, parent):
+    def _serialize_field(self, obj, field_name, parent):
         """
         Same behaviour as usual Field, except that we need to keep track
         of state so that we can deal with handling maximum depth and recursion.
@@ -197,15 +197,15 @@ class BaseSerializer(Field):
         if parent.opts.depth is not None:
             self.opts.depth = parent.opts.depth - 1
 
-        return super(BaseSerializer, self).serialize_field(obj, field_name, parent)
+        return super(BaseSerializer, self)._serialize_field(obj, field_name, parent)
 
     def serialize_object(self, obj):
         if self.source != '*' and obj in self.stack:
             serializer = self.get_recursive_serializer(self.orig_obj,
                                                        self.orig_field_name)
-            return serializer.serialize_field(self.orig_obj,
-                                              self.orig_field_name,
-                                              self)
+            return serializer._serialize_field(self.orig_obj,
+                                               self.orig_field_name,
+                                               self)
         self.stack.append(obj)
 
         if self.opts.preserve_field_order:
@@ -216,7 +216,7 @@ class BaseSerializer(Field):
         for field_name in self._get_field_names(obj):
             serializer = self._get_field_serializer(obj, field_name)
             key = self.get_field_key(obj, field_name, serializer)
-            value = serializer.serialize_field(obj, field_name, self)
+            value = serializer._serialize_field(obj, field_name, self)
             ret[key] = value
         return ret
 

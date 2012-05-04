@@ -422,7 +422,16 @@ ModelSerializer Options
 =======================
 
 The ModelSerializer supports all the options for Serializer, as well as
-one other:
+these additional options:
+
+related_field
+-------------
+
+The class that should be used for serializing related model fields once
+the maximum depth has been reached, or recursion occurs.
+`related_field` can be applied to `OneToOneField`, `ForeignKey`,
+`ManyToManyField`, or any of their corrosponding reverse managers.
+Default is `ModelPKField`.
 
 model_fields
 ------------
@@ -445,21 +454,23 @@ Returns a native python datatype representing the given object.
 If you are writing a custom field, overiding `serialize()` will let
 you customise how the output is generated.
 
-get_field_value(self, obj, field_name)
---------------------------------------
-
-Determines how the attribute that should be serialized is retrieved from the object.
-
-If you are writing a custom `Field`and need to control exactly which attributes
-of the object are serialized, you will need to override this method.  (For example if you are writing a`datetime` serializer which combines information
-from two seperate `date` and `time` attributes on an object.)
-
 serialize_field(self, obj, field_name)
 --------------------------------------
 
-The main entry point into field serialization, which handles calling `get_field_value` and `serialize`, and ensures the `source` arguemnt is used to determine which attribute to fetch from the object.
+Returns a native python datatype representing the given `field_name`
+attribute on `object`.
 
-You won't typically need to override this method.
+This defaults to getting the attribute from `obj` using `getattr`, and
+calling `serialize` on the result.
+
+If you are writing a custom `Field`and need to control exactly which attributes
+of the object are serialized, you will need to override this method instead of
+the `serialize` method.
+
+(For example if you are writing a`datetime` serializer which combines
+information from two seperate `date` and `time` attributes on an object, or
+perhaps if you are writing a `Field` serializer which serializes some
+non-attribute aspect of the object such as it's class name)
 
 
 Serializer methods
