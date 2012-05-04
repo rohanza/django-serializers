@@ -505,15 +505,8 @@ get_default_field_names(self, obj)
 ----------------------------------
 
 Return the default set of field names that should be serialized for an object.
-If a serializer has no `Serializer` classes declared as fields, then this will be the set of
-fields names that will be serialized.
-
-get_default_field_serializer(self, obj, field_name)
----------------------------------------------------
-
-Returns the Field or Serializer instance that should be used for a field if there was no explicitly declared `Field` for the given `field_name`.  A return value of `None` indicates that the existing class should be used to serialize the field, resulting in nested serialization.
-
-By default this method will call one of `get_flat_serializer()`, `get_recursive_serializer()` or `get_nested_serializer()`.
+If a serializer has no `Serializer` classes declared as fields, then this will
+be the set of fields names that will be serialized.
 
 render(self, data, format, **opts)
 ----------------------------------

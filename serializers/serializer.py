@@ -160,7 +160,16 @@ class BaseSerializer(Field):
         try:
             return self.fields[field_name]
         except KeyError:
-            return self.get_default_field_serializer(obj, field_name)
+            return self._get_default_field_serializer(obj, field_name)
+
+    def _get_default_field_serializer(self, obj, field_name):
+        """
+        If a field does not have an explicitly declared serializer, return the
+        default serializer instance that should be used for that field.
+        """
+        if self.opts.depth is not None and self.opts.depth <= 0:
+            return self.get_flat_serializer(obj, field_name)
+        return self.get_nested_serializer(obj, field_name)
 
     def get_default_field_names(self, obj):
         """
@@ -170,16 +179,10 @@ class BaseSerializer(Field):
         """
         return [key for key in obj.__dict__.keys() if not(key.startswith('_'))]
 
-    def get_default_field_serializer(self, obj, field_name):
-        """
-        If a field does not have an explicitly declared serializer, return the
-        default serializer instance that should be used for that field.
-        """
-        if self.opts.depth is not None and self.opts.depth <= 0:
-            return self.get_flat_serializer(obj, field_name)
-        return self.get_nested_serializer(obj, field_name)
-
     def get_field_key(self, obj, field_name, field):
+        """
+        Return the key that should be used for a given field.
+        """
         if getattr(field, 'label', None):
             return field.label
         return field_name
