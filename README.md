@@ -49,15 +49,20 @@ the existing `loaddata` deserialization with a more flexible deserialization
 API is considered out of scope, until the serialization API has first been adequatly addressed.
 * `django-serializers` current does not provide an API that is backwards compatible
 with the existing `dumpdata` serializers.  Need to consider if this is a requirement.  Eg. would this be a replacement to the existing serializers, or an addition to them?
-* I'd like to add `nested.field` syntax to the `include`, `exclude` and `field` argument, to allow quick declarations of nested representations.
-* Add `nested.field` syntax to the `source` argument, to allow quick declarations of serializing nested elements into a flat output structure.
 * source='*' should have the effect of passing through `fields`, `include`, `exclude` to the child field, instead of applying to the parent serializer, so eg. DumpDataSerializer will recognise that those arguments apply to the `fields:` level, rather than referring to what should be included at the root level.
 * streaming output, rather than loading all the data into memory.
-* Better `csv` format.  (Eg nested fields)
 * Consider character encoding issues.
 * `stack` needs to be reverted at start of new serialization.
 * Performance testing.
 * Remove ordered keys / unordered keys from public interface.  Always on for ModelSerializer, always off for DumpDataSerializer.
+* Fixup KeyWithMetadata - use SortedDictWithMetadata instead.
+* indent option for xml
+
+Nice to have:
+
+* I'd like to add `nested.field` syntax to the `include`, `exclude` and `field` argument, to allow quick declarations of nested representations.
+* Add `nested.field` syntax to the `source` argument, to allow quick declarations of serializing nested elements into a flat output structure.
+* Better `csv` format.  (Eg nested fields)
 
 Done:
 
@@ -442,8 +447,8 @@ the maximum depth has been reached, or recursion occurs.
 `ManyToManyField`, or any of their corrosponding reverse managers.
 Default is `PrimaryKeyRelatedField`.
 
-model_fields
-------------
+model_field_types
+-----------------
 
 A list of model field types that should be serialized by default.
 Available options are: 'pk', 'fields', 'many_to_many', 'local_fields',
@@ -480,6 +485,13 @@ the `serialize` method.
 information from two seperate `date` and `time` attributes on an object, or
 perhaps if you are writing a `Field` serializer which serializes some
 non-attribute aspect of the object such as it's class name)
+
+attributes() [optional]
+-----------------------
+
+If specified `attributes()` should return a dictionary that may be used
+when rendering to xml to determine the attribtues on the tag that represents
+this field.
 
 
 Serializer methods
