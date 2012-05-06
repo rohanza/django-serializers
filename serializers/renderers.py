@@ -58,6 +58,40 @@ class XMLRenderer(BaseRenderer):
 
         xml = SimplerXMLGenerator(stream, "utf-8")
         xml.startDocument()
+        self._to_xml(xml, obj)
+        xml.endDocument()
+        return stream.getvalue()
+
+    def _to_xml(self, xml, data):
+        if isinstance(data, (list, tuple)):
+            for item in data:
+                xml.startElement("item", {})
+                self._to_xml(xml, item)
+                xml.endElement("item")
+
+        elif isinstance(data, dict):
+            xml.startElement("object", {})
+            for key, value in data.items():
+                xml.startElement(key, {})
+                self._to_xml(xml, value)
+                xml.endElement(key)
+            xml.endElement("object")
+
+        else:
+            xml.characters(smart_unicode(data))
+
+
+class DumpDataXMLRenderer(BaseRenderer):
+    """
+    Render a native python object into XML.
+    Note that this renderer is included more by way of example,
+    than as a proposed final XML renderer.
+    """
+    def render(self, obj, **opts):
+        stream = StringIO.StringIO()
+
+        xml = SimplerXMLGenerator(stream, "utf-8")
+        xml.startDocument()
         xml.startElement("django-objects", {"version": "1.0"})
         if isinstance(obj, (list, tuple)):
             [self.model_to_xml(xml, item) for item in obj]
@@ -67,26 +101,6 @@ class XMLRenderer(BaseRenderer):
         xml.endDocument()
         return stream.getvalue()
 
-    # def _to_xml(self, xml, data):
-    #     if isinstance(data, (list, tuple)):
-    #         for item in data:
-    #             xml.startElement("list-item", {})
-    #             self._to_xml(xml, item)
-    #             xml.endElement("list-item")
-
-    #     elif isinstance(data, dict):
-    #         # TODO: use iteritems unless sort_keys is set.
-    #         for key, value in sorted(data.items()):
-    #             xml.startElement(key, {})
-    #             self._to_xml(xml, value)
-    #             xml.endElement(key)
-
-    #     elif data is None:
-    #         # Don't output any value
-    #         pass
-
-    #     else:
-    #         xml.characters(smart_unicode(data))
     def model_to_xml(self, xml, data):
         pk = unicode(data['pk'])
         model = data['model']

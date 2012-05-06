@@ -55,10 +55,10 @@ class EncoderTests(TestCase):
         output = Serializer().encode(self.obj, 'yaml')
         self.assertEquals(output, expected)
 
-    # def test_xml(self):
-    #     expected = '<?xml version="1.0" encoding="utf-8"?>\n<root><a>1</a><b>foo</b><c>True</c></root>'
-    #     output = Serializer().encode(self.obj, 'xml')
-    #     self.assertEquals(output, expected)
+    def test_xml(self):
+        expected = '<?xml version="1.0" encoding="utf-8"?>\n<object><a>1</a><c>True</c><b>foo</b></object>'
+        output = Serializer().encode(self.obj, 'xml')
+        self.assertEquals(output, expected)
 
 
 class BasicSerializerTests(TestCase):

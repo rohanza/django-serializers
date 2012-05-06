@@ -1,6 +1,3 @@
-# TODO: Restore generic xml test
-# None types and None datetime types in xml
-# xml natural keys
 from decimal import Decimal
 from django.utils.datastructures import SortedDict
 import copy
@@ -11,7 +8,8 @@ from serializers.renderers import (
     JSONRenderer,
     YAMLRenderer,
     XMLRenderer,
-    CSVRenderer
+    CSVRenderer,
+    DumpDataXMLRenderer
 )
 from serializers.fields import *
 from serializers.utils import key_with_field
@@ -313,6 +311,12 @@ class DumpDataSerializer(ModelSerializer):
     """
     A serializer that is intended to produce dumpdata formatted structures.
     """
+
+    renderer_classes = {
+        'xml': DumpDataXMLRenderer,
+        'json': JSONRenderer,
+        'yaml': YAMLRenderer,
+    }
 
     pk = Field()
     model = ModelNameField()
