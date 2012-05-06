@@ -1,3 +1,6 @@
+# TODO: Restore generic xml test
+# None types and None datetime types in xml
+# xml natural keys
 from decimal import Decimal
 from django.utils.datastructures import SortedDict
 import copy
@@ -11,6 +14,7 @@ from serializers.renderers import (
     CSVRenderer
 )
 from serializers.fields import *
+from serializers.utils import key_with_field
 
 
 def _remove_items(seq, exclude):
@@ -41,7 +45,7 @@ def _get_declared_fields(bases, attrs):
 
     # If this class is subclassing another Serializer, add that Serializer's
     # fields.  Note that we loop over the bases in *reverse*. This is necessary
-    # in order to preserve the correct order of fields.
+    # in order to the correct order of fields.
     for base in bases[::-1]:
         if hasattr(base, 'base_fields'):
             fields = base.base_fields.items() + fields
@@ -73,7 +77,8 @@ class SerializerOptions(object):
 class ModelSerializerOptions(SerializerOptions):
     def __init__(self, meta, **kwargs):
         super(ModelSerializerOptions, self).__init__(meta, **kwargs)
-        self.model_fields = _get_option('model_fields', kwargs, meta, None)
+        self.model_field_types = _get_option('model_field_types', kwargs, meta, None)
+        self.model_field = _get_option('model_field', kwargs, meta, ModelField)
         self.related_field = _get_option('related_field', kwargs, meta, PrimaryKeyRelatedField)
 
 
@@ -219,9 +224,10 @@ class BaseSerializer(Field):
             ret = {}
 
         for field_name in self._get_field_names(obj):
-            serializer = self._get_field_serializer(obj, field_name)
-            key = self.get_field_key(obj, field_name, serializer)
-            value = serializer._serialize_field(obj, field_name, self)
+            field = self._get_field_serializer(obj, field_name)
+            key = self.get_field_key(obj, field_name, field)
+            key = key_with_field(key, field)
+            value = field._serialize_field(obj, field_name, self)
             ret[key] = value
         return ret
 
@@ -257,13 +263,13 @@ class ModelSerializer(Serializer):
 
     class Meta:
         related_field = PrimaryKeyRelatedField
-        model_fields = ('pk', 'fields', 'many_to_many')
+        model_field_types = ('pk', 'fields', 'many_to_many')
 
     def get_default_field_names(self, obj):
         fields = []
         concrete_model = obj._meta.concrete_model
 
-        for field_type in self.opts.model_fields:
+        for field_type in self.opts.model_field_types:
             if field_type == 'pk':
                 # Add pk field, descending into inherited pk if needed
                 pk_field = concrete_model._meta.pk
@@ -277,17 +283,19 @@ class ModelSerializer(Serializer):
                     getattr(concrete_model._meta, field_type)
                     if field.serialize
                 ])
-
         return [field.name for field in fields]
 
     def get_related_serializer(self, obj, field_name):
         return self.opts.related_field()
 
     def get_flat_serializer(self, obj, field_name):
-        field = obj._meta.get_field_by_name(field_name)[0]
-        if isinstance(field, RelatedObject) or field.rel:
-            return self.get_related_serializer(obj, field_name)
-        return self.opts.flat_field()
+        try:
+            field = obj._meta.get_field_by_name(field_name)[0]
+            if isinstance(field, RelatedObject) or field.rel:
+                return self.get_related_serializer(obj, field_name)
+            return self.opts.model_field()
+        except FieldDoesNotExist:
+            return self.opts.flat_field()
 
     def serialize(self, obj):
         if self._is_protected_type(obj):
@@ -309,14 +317,14 @@ class DumpDataSerializer(ModelSerializer):
     pk = Field()
     model = ModelNameField()
     fields = ModelSerializer(
-        source='*', depth=0, model_fields=('local_fields', 'many_to_many')
+        source='*', depth=0, model_field_types=('local_fields', 'many_to_many'),
     )
 
     def encode(self, obj, format=None, **opts):
         if opts.get('use_natural_keys', None):
             self.fields['fields'] = ModelSerializer(
                 source='*', depth=0,
-                model_fields=('local_fields', 'many_to_many'),
+                model_field_types=('local_fields', 'many_to_many'),
                 related_field=NaturalKeyRelatedField
             )
         return super(DumpDataSerializer, self).encode(obj, format, **opts)

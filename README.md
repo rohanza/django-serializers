@@ -37,10 +37,9 @@ Features:
 * Hooks throughout to allow for complete customization.  Eg. Writing key names using javascript style camel casing.
 * Simple, clean API.
 * Comprehensive test suite.
-
+diff
 Still to do:
 
-* More tests for natural key support.
 * Tests for non-numeric FKs, and FKs with a custom db implementation.
 * Tests for many2many FKs with a 'through' model.
 * Tests for proxy models.

@@ -55,10 +55,10 @@ class EncoderTests(TestCase):
         output = Serializer().encode(self.obj, 'yaml')
         self.assertEquals(output, expected)
 
-    def test_xml(self):
-        expected = '<?xml version="1.0" encoding="utf-8"?>\n<root><a>1</a><b>foo</b><c>True</c></root>'
-        output = Serializer().encode(self.obj, 'xml')
-        self.assertEquals(output, expected)
+    # def test_xml(self):
+    #     expected = '<?xml version="1.0" encoding="utf-8"?>\n<root><a>1</a><b>foo</b><c>True</c></root>'
+    #     output = Serializer().encode(self.obj, 'xml')
+    #     self.assertEquals(output, expected)
 
 
 class BasicSerializerTests(TestCase):
@@ -738,6 +738,12 @@ class TestOneToOneModel(TestCase):
             serializers.serialize('yaml', Profile.objects.all())
         )
 
+    def test_onetoone_dumpdata_xml(self):
+        self.assertEquals(
+            self.dumpdata.encode(Profile.objects.all(), 'xml'),
+            serializers.serialize('xml', Profile.objects.all())
+        )
+
     def test_onetoone_nested(self):
         expected = {
             'id': 1,
@@ -855,6 +861,15 @@ class TestFKModel(TestCase):
         self.assertEquals(
             self.dumpdata.encode(Vehicle.objects.all(), 'yaml'),
             serializers.serialize('yaml', Vehicle.objects.all())
+        )
+
+    def test_fk_dumpdata_xml(self):
+        # # Hack to ensure field ordering is correct for xml
+        # dumpdata = DumpDataSerializer()
+        # dumpdata.fields['fields'].opts.preserve_field_order = True
+        self.assertEquals(
+            self.dumpdata.encode(Vehicle.objects.all(), 'xml'),
+            serializers.serialize('xml', Vehicle.objects.all())
         )
 
     def test_fk_nested(self):
@@ -977,6 +992,19 @@ class TestManyToManyModel(TestCase):
         self.assertEquals(
             self.dumpdata.encode(Author.objects.all(), 'yaml'),
             serializers.serialize('yaml', Author.objects.all())
+        )
+
+    def test_m2m_dumpdata_xml(self):
+        # # Hack to ensure field ordering is correct for xml
+        # dumpdata = DumpDataSerializer()
+        # dumpdata.fields['fields'].opts.preserve_field_order = True
+        self.assertEquals(
+            self.dumpdata.encode(Book.objects.all(), 'xml'),
+            serializers.serialize('xml', Book.objects.all())
+        )
+        self.assertEquals(
+            self.dumpdata.encode(Author.objects.all(), 'xml'),
+            serializers.serialize('xml', Author.objects.all())
         )
 
     def test_m2m_nested(self):

@@ -1,3 +1,4 @@
+import datetime
 from django.core.serializers.json import DateTimeAwareJSONEncoder
 from django.utils import simplejson as json
 from django.utils.encoding import smart_unicode
@@ -57,34 +58,59 @@ class XMLRenderer(BaseRenderer):
 
         xml = SimplerXMLGenerator(stream, "utf-8")
         xml.startDocument()
-        xml.startElement("root", {})
-
-        self._to_xml(xml, obj)
-
-        xml.endElement("root")
+        xml.startElement("django-objects", {"version": "1.0"})
+        if isinstance(obj, (list, tuple)):
+            [self.model_to_xml(xml, item) for item in obj]
+        else:
+            self.model_to_xml(xml, obj)
+        xml.endElement("django-objects")
         xml.endDocument()
         return stream.getvalue()
 
-    def _to_xml(self, xml, data):
-        if isinstance(data, (list, tuple)):
-            for item in data:
-                xml.startElement("list-item", {})
-                self._to_xml(xml, item)
-                xml.endElement("list-item")
+    # def _to_xml(self, xml, data):
+    #     if isinstance(data, (list, tuple)):
+    #         for item in data:
+    #             xml.startElement("list-item", {})
+    #             self._to_xml(xml, item)
+    #             xml.endElement("list-item")
 
-        elif isinstance(data, dict):
-            # TODO: use iteritems unless sort_keys is set.
-            for key, value in sorted(data.items()):
-                xml.startElement(key, {})
-                self._to_xml(xml, value)
-                xml.endElement(key)
+    #     elif isinstance(data, dict):
+    #         # TODO: use iteritems unless sort_keys is set.
+    #         for key, value in sorted(data.items()):
+    #             xml.startElement(key, {})
+    #             self._to_xml(xml, value)
+    #             xml.endElement(key)
 
-        elif data is None:
-            # Don't output any value
-            pass
+    #     elif data is None:
+    #         # Don't output any value
+    #         pass
 
-        else:
-            xml.characters(smart_unicode(data))
+    #     else:
+    #         xml.characters(smart_unicode(data))
+    def model_to_xml(self, xml, data):
+        pk = unicode(data['pk'])
+        model = data['model']
+        fields = data['fields']
+        xml.startElement("object", {'pk': pk, 'model': model})
+
+        # Due to implmentation details, the existing xml dumpdata format
+        # renders ordered fields, whilst json and yaml render unordered
+        # fields (ordering determined by `dict`)
+        # To maintain byte-for-byte backwards compatability,
+        # we'll deal with that now.
+        sorted_items = sorted(fields.items(),
+                              key=lambda x: x[0].field.creation_counter)
+
+        for key, value in sorted_items:
+            attrs = {'name': key}
+            attrs.update(key.field.attributes())
+            xml.startElement('field', attrs)
+            if isinstance(value, (datetime.datetime, datetime.date, datetime.time)):
+                xml.characters(value.isoformat())
+            elif value is not None:
+                xml.characters(smart_unicode(value))
+            xml.endElement('field')
+        xml.endElement("object")
 
 
 class CSVRenderer(BaseRenderer):

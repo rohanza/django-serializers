@@ -17,11 +17,13 @@ class Field(object):
         """
         The entry point into a field, as called by it's parent serializer.
         """
+        self.obj = obj
+
         if self.source == '*':
             return self.serialize(obj)
 
-        field_name = self.source or field_name
-        return self.serialize_field(obj, field_name)
+        self.field_name = self.source or field_name
+        return self.serialize_field(obj, self.field_name)
 
     def serialize_field(self, obj, field_name):
         """
@@ -41,6 +43,25 @@ class Field(object):
         return smart_unicode(obj)
 
 
+class ModelField(Field):
+    def serialize_field(self, obj, field_name):
+        field = self.obj._meta.get_field_by_name(self.field_name)[0]
+        value = field._get_val_from_obj(obj)
+        # Protected types (i.e., primitives like None, numbers, dates,
+        # and Decimals) are passed through as is. All other values are
+        # converted to string first.
+        self.field = field
+        if is_protected_type(value):
+            return value
+        else:
+            return field.value_to_string(obj)
+
+    def attributes(self):
+        return {
+            "type": self.field.get_internal_type()
+        }
+
+
 class RelatedField(Field):
     """
     A base class for model related fields or related managers.
@@ -54,8 +75,15 @@ class RelatedField(Field):
             return [self.serialize(item) for item in obj.all()]
         return self.serialize(obj)
 
+    def attributes(self):
+        field = self.obj._meta.get_field_by_name(self.field_name)[0]
+        return {
+            "rel": field.rel.__class__.__name__,
+            "to": smart_unicode(field.rel.to._meta)
+        }
 
-class PrimaryKeyRelatedField(Field):
+
+class PrimaryKeyRelatedField(RelatedField):
     """
     Serializes a model related field or related manager to a pk value.
     """
@@ -70,6 +98,7 @@ class PrimaryKeyRelatedField(Field):
     #         return obj.pk
 
     def serialize_field(self, obj, field_name):
+        self.test = field_name
         try:
             obj = obj.serializable_value(field_name)
         except AttributeError:

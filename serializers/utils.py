@@ -3,6 +3,29 @@ from django.utils.datastructures import SortedDict
 import csv
 
 
+class KeyWithMetadata(unicode):
+    """
+    A unicode-like object, that can have additional attributes attached.
+    """
+    pass
+
+
+def key_with_field(key, field):
+    """
+    The dictionary keys that we use in the intermediary format have the
+    field that generated them attached as metadata.
+
+    The allows renderer classes to pull in any additional encoding-specific
+    information they might need.
+
+    (For example the 'xml' renderer uses it to retrieve any attributes
+    that should be set on the field.)
+    """
+    key = KeyWithMetadata(key)
+    key.field = field
+    return key
+
+
 try:
     import yaml
 except ImportError:
@@ -11,10 +34,19 @@ except ImportError:
 else:
     # Adapted from http://pyyaml.org/attachment/ticket/161/use_ordered_dict.py
     class DjangoSafeDumper(yaml.SafeDumper):
+        """
+        Handles decimals as strings, and our dictionary KeyWithMetadata keys
+        as regular unicode keys.
+        """
         def represent_decimal(self, data):
             return self.represent_scalar('tag:yaml.org,2002:str', str(data))
 
     class OrderedSafeDumper(DjangoSafeDumper):
+        """
+        Handles decimals as strings, regular dicts as if they we normal dicts
+        (but getting the field order correct) and our dictionary
+        KeyWithMetadata keys as regular unicode keys.
+        """
         def represent_decimal(self, data):
             return self.represent_scalar('tag:yaml.org,2002:str', str(data))
 
@@ -43,6 +75,10 @@ else:
 
     OrderedSafeDumper.add_representer(SortedDict,
             yaml.representer.SafeRepresenter.represent_dict)
+    OrderedSafeDumper.add_representer(KeyWithMetadata,
+            yaml.representer.SafeRepresenter.represent_unicode)
+    DjangoSafeDumper.add_representer(KeyWithMetadata,
+            yaml.representer.SafeRepresenter.represent_unicode)
 
 
 class DictWriter(csv.DictWriter):
