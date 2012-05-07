@@ -539,6 +539,11 @@ The `data` argument is provided by the return value of the
 Changelog
 =========
 
+0.4.0
+-----
+
+* Dumpdata support for json and yaml.  xml nearly complete.
+
 0.3.2
 -----
 
