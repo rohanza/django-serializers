@@ -27,23 +27,14 @@ class SortedDictWithMetadata(SortedDict, DictWithMetadata):
 try:
     import yaml
 except ImportError:
-    DjangoSafeDumper = None
-    OrderedSafeDumper = None
+    SafeDumper = None
 else:
     # Adapted from http://pyyaml.org/attachment/ticket/161/use_ordered_dict.py
-    class DjangoSafeDumper(yaml.SafeDumper):
+    class SafeDumper(yaml.SafeDumper):
         """
-        Handles decimals as strings, and our dictionary KeyWithMetadata keys
-        as regular unicode keys.
-        """
-        def represent_decimal(self, data):
-            return self.represent_scalar('tag:yaml.org,2002:str', str(data))
-
-    class OrderedSafeDumper(DjangoSafeDumper):
-        """
-        Handles decimals as strings, regular dicts as if they we normal dicts
-        (but getting the field order correct) and our dictionary
-        KeyWithMetadata keys as regular unicode keys.
+        Handles decimals as strings.
+        Handles SortedDicts as usual dicts, but preserves field order, rather
+        than the usual behaviour of sorting the keys.
         """
         def represent_decimal(self, data):
             return self.represent_scalar('tag:yaml.org,2002:str', str(data))
@@ -73,9 +64,9 @@ else:
                     node.flow_style = best_style
             return node
 
-    OrderedSafeDumper.add_representer(DictWithMetadata,
+    SafeDumper.add_representer(DictWithMetadata,
             yaml.representer.SafeRepresenter.represent_dict)
-    OrderedSafeDumper.add_representer(SortedDictWithMetadata,
+    SafeDumper.add_representer(SortedDictWithMetadata,
             yaml.representer.SafeRepresenter.represent_dict)
 
 

@@ -3,7 +3,7 @@ from django.core.serializers.json import DateTimeAwareJSONEncoder
 from django.utils import simplejson as json
 from django.utils.encoding import smart_unicode
 from django.utils.xmlutils import SimplerXMLGenerator
-from serializers.utils import DjangoSafeDumper, OrderedSafeDumper, DictWriter
+from serializers.utils import SafeDumper, DictWriter
 import StringIO
 try:
     import yaml
@@ -39,7 +39,7 @@ class YAMLRenderer(BaseRenderer):
     def render(self, obj, **opts):
         indent = opts.pop('indent', None)
         default_flow_style = opts.pop('default_flow_style', None)
-        return yaml.dump(obj, Dumper=OrderedSafeDumper,
+        return yaml.dump(obj, Dumper=SafeDumper,
                          indent=indent, default_flow_style=default_flow_style)
 
 
