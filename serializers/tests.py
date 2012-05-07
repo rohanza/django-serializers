@@ -56,7 +56,7 @@ class EncoderTests(TestCase):
         self.assertEquals(output, expected)
 
     def test_xml(self):
-        expected = '<?xml version="1.0" encoding="utf-8"?>\n<object><a>1</a><c>True</c><b>foo</b></object>'
+        expected = '<?xml version="1.0" encoding="utf-8"?>\n<object><a>1</a><b>foo</b><c>True</c></object>'
         output = Serializer().encode(self.obj, 'xml')
         self.assertEquals(output, expected)
 
@@ -536,7 +536,7 @@ class RaceEntry(models.Model):
 class TestSimpleModel(TestCase):
     def setUp(self):
         self.dumpdata = DumpDataSerializer()
-        self.serializer = Serializer(depth=0)
+        self.serializer = ModelSerializer(depth=0)
         RaceEntry.objects.create(
             name='John doe',
             runner_number=6014,
@@ -552,8 +552,8 @@ class TestSimpleModel(TestCase):
 
     def test_csv(self):
         expected = (
-            "finish_time,start_time,id,name,runner_number\r\n"
-            "2012-04-30 12:25:00,2012-04-30 09:00:00,1,John doe,6014\r\n"
+            "id,name,runner_number,start_time,finish_time\r\n"
+            "1,John doe,6014,2012-04-30 09:00:00,2012-04-30 12:25:00\r\n"
         )
         self.assertEquals(
             self.serializer.encode(RaceEntry.objects.all(), 'csv'),
@@ -864,9 +864,6 @@ class TestFKModel(TestCase):
         )
 
     def test_fk_dumpdata_xml(self):
-        # # Hack to ensure field ordering is correct for xml
-        # dumpdata = DumpDataSerializer()
-        # dumpdata.fields['fields'].opts.preserve_field_order = True
         self.assertEquals(
             self.dumpdata.encode(Vehicle.objects.all(), 'xml'),
             serializers.serialize('xml', Vehicle.objects.all())

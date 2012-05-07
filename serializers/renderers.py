@@ -39,11 +39,7 @@ class YAMLRenderer(BaseRenderer):
     def render(self, obj, **opts):
         indent = opts.pop('indent', None)
         default_flow_style = opts.pop('default_flow_style', None)
-        use_ordered_dumper = opts.pop('default_flow_style', False)
-
-        dumper = use_ordered_dumper and OrderedSafeDumper or DjangoSafeDumper
-
-        return yaml.dump(obj, Dumper=dumper,
+        return yaml.dump(obj, Dumper=OrderedSafeDumper,
                          indent=indent, default_flow_style=default_flow_style)
 
 
@@ -112,12 +108,12 @@ class DumpDataXMLRenderer(BaseRenderer):
         # fields (ordering determined by `dict`)
         # To maintain byte-for-byte backwards compatability,
         # we'll deal with that now.
-        sorted_items = sorted(fields.items(),
-                              key=lambda x: x[0].field.creation_counter)
+        sorted_items = sorted(fields.items_with_metadata(),
+                              key=lambda x: x[2].creation_counter)
 
-        for key, value in sorted_items:
+        for key, value, field in sorted_items:
             attrs = {'name': key}
-            attrs.update(key.field.attributes())
+            attrs.update(field.attributes())
             xml.startElement('field', attrs)
             if isinstance(value, (datetime.datetime, datetime.date, datetime.time)):
                 xml.characters(value.isoformat())

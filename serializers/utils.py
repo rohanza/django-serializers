@@ -3,27 +3,25 @@ from django.utils.datastructures import SortedDict
 import csv
 
 
-class KeyWithMetadata(unicode):
+class DictWithMetadata(dict):
     """
-    A unicode-like object, that can have additional attributes attached.
+    A dict-like object, that can have additional metadata attached.
     """
+    def __init__(self, *args, **kwargs):
+        super(DictWithMetadata, self).__init__(*args, **kwargs)
+        self.metadata = {}
+
+    def set_with_metadata(self, key, value, metadata):
+        self[key] = value
+        self.metadata[key] = metadata
+
+    def items_with_metadata(self):
+        return [(key, value, self.metadata[key])
+        for (key, value) in self.items()]
+
+
+class SortedDictWithMetadata(SortedDict, DictWithMetadata):
     pass
-
-
-def key_with_field(key, field):
-    """
-    The dictionary keys that we use in the intermediary format have the
-    field that generated them attached as metadata.
-
-    The allows renderer classes to pull in any additional encoding-specific
-    information they might need.
-
-    (For example the 'xml' renderer uses it to retrieve any attributes
-    that should be set on the field.)
-    """
-    key = KeyWithMetadata(key)
-    key.field = field
-    return key
 
 
 try:
@@ -58,6 +56,8 @@ else:
             best_style = True
             if hasattr(mapping, 'items'):
                 mapping = list(mapping.items())
+                if not isinstance(mapping, SortedDict):
+                    mapping.sort()
             for item_key, item_value in mapping:
                 node_key = self.represent_data(item_key)
                 node_value = self.represent_data(item_value)
@@ -73,12 +73,10 @@ else:
                     node.flow_style = best_style
             return node
 
-    OrderedSafeDumper.add_representer(SortedDict,
+    OrderedSafeDumper.add_representer(DictWithMetadata,
             yaml.representer.SafeRepresenter.represent_dict)
-    OrderedSafeDumper.add_representer(KeyWithMetadata,
-            yaml.representer.SafeRepresenter.represent_unicode)
-    DjangoSafeDumper.add_representer(KeyWithMetadata,
-            yaml.representer.SafeRepresenter.represent_unicode)
+    OrderedSafeDumper.add_representer(SortedDictWithMetadata,
+            yaml.representer.SafeRepresenter.represent_dict)
 
 
 class DictWriter(csv.DictWriter):

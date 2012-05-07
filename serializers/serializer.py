@@ -12,7 +12,7 @@ from serializers.renderers import (
     DumpDataXMLRenderer
 )
 from serializers.fields import *
-from serializers.utils import key_with_field
+from serializers.utils import DictWithMetadata, SortedDictWithMetadata
 
 
 def _remove_items(seq, exclude):
@@ -64,9 +64,6 @@ class SerializerOptions(object):
         self.include_default_fields = _get_option(
             'include_default_fields', kwargs, meta, False
         )
-        self.preserve_field_order = _get_option(
-            'preserve_field_order', kwargs, meta, False
-        )
         self.flat_field = _get_option('flat_field', kwargs, meta, Field)
         self.recursive_field = _get_option('recursive_field', kwargs, meta, None)
         self.nested_field = _get_option('nested_field', kwargs, meta, None)
@@ -98,6 +95,7 @@ class BaseSerializer(Field):
     }
 
     options_class = SerializerOptions
+    _use_sorted_dict = True
 
     def __init__(self, **kwargs):
         source = kwargs.get('source', None)
@@ -182,7 +180,8 @@ class BaseSerializer(Field):
         This is what would be serialized if no explicit `Serializer` fields
         are declared.
         """
-        return [key for key in obj.__dict__.keys() if not(key.startswith('_'))]
+        return sorted([key for key in obj.__dict__.keys()
+                       if not(key.startswith('_'))])
 
     def get_field_key(self, obj, field_name, field):
         """
@@ -216,17 +215,16 @@ class BaseSerializer(Field):
                                                self)
         self.stack.append(obj)
 
-        if self.opts.preserve_field_order:
-            ret = SortedDict()
+        if self._use_sorted_dict:
+            ret = SortedDictWithMetadata()
         else:
-            ret = {}
+            ret = DictWithMetadata()
 
         for field_name in self._get_field_names(obj):
             field = self._get_field_serializer(obj, field_name)
             key = self.get_field_key(obj, field_name, field)
-            key = key_with_field(key, field)
             value = field._serialize_field(obj, field_name, self)
-            ret[key] = value
+            ret.set_with_metadata(key, value, field)
         return ret
 
     def serialize(self, obj):
@@ -307,10 +305,19 @@ class ModelSerializer(Serializer):
         return self.serialize_object(obj)
 
 
+class DumpDataFields(ModelSerializer):
+    _use_sorted_dict = False
+
+    class Meta:
+        depth = 0
+        model_field_types = ('local_fields', 'many_to_many')
+
+
 class DumpDataSerializer(ModelSerializer):
     """
     A serializer that is intended to produce dumpdata formatted structures.
     """
+    _use_sorted_dict = False
 
     renderer_classes = {
         'xml': DumpDataXMLRenderer,
@@ -320,15 +327,9 @@ class DumpDataSerializer(ModelSerializer):
 
     pk = Field()
     model = ModelNameField()
-    fields = ModelSerializer(
-        source='*', depth=0, model_field_types=('local_fields', 'many_to_many'),
-    )
+    fields = DumpDataFields(source='*')
 
     def encode(self, obj, format=None, **opts):
         if opts.get('use_natural_keys', None):
-            self.fields['fields'] = ModelSerializer(
-                source='*', depth=0,
-                model_field_types=('local_fields', 'many_to_many'),
-                related_field=NaturalKeyRelatedField
-            )
+            self.fields['fields'] = DumpDataFields(source='*', related_field=NaturalKeyRelatedField)
         return super(DumpDataSerializer, self).encode(obj, format, **opts)

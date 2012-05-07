@@ -405,12 +405,6 @@ object will be serialized:
         class Meta:
             include_default_fields = True
 
-preserve_field_ordering
------------------------
-
-If set to `True`, objects will be serialized using ordered dictionaries,
-which preserve the ordering that the fields are declared in.
-
 flat_field
 ----------
 
