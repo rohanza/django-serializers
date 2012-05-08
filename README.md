@@ -31,19 +31,19 @@ Features:
 * Allows for both implicit fields, which are determined at the point of serialization, and explicit fields, which are declared on the serializer class.
 * The declaration of the serialization structure is handled independantly of the final encoding used (eg 'json', 'xml' etc…).  This is desirable for eg. APIs which want to support a given dataset being output to a number of different formats.
 * Currently supports 'json', 'yaml', 'xml', 'csv'.
-* Supports both ordered fields for readablity, and unordered fields for speed.
 * Supports both fields that corrospond to Django model fields, and fields that corrospond to other attributes, such as `get_absolute_url`.
 * Supports relations serializing to primary keys, natural keys, or custom implementations.
 * Hooks throughout to allow for complete customization.  Eg. Writing key names using javascript style camel casing.
 * Simple, clean API.
 * Comprehensive test suite.
-diff
+
 Still to do:
 
 * Tests for non-numeric FKs, and FKs with a custom db implementation.
 * Tests for many2many FKs with a 'through' model.
 * Tests for proxy models.
 * Finish off xml dumpdata backward compat - many to many, natural keys, None & None on datetime fields all need tweaking.
+* Default xml renderer needs to include attributes, not just the dumpdata one.
 * `django-serializers` currently does not address deserialization.  Replacing
 the existing `loaddata` deserialization with a more flexible deserialization
 API is considered out of scope, until the serialization API has first been adequatly addressed.
@@ -54,8 +54,6 @@ with the existing `dumpdata` serializers.  Need to consider if this is a require
 * Consider character encoding issues.
 * `stack` needs to be reverted at start of new serialization.
 * Performance testing.
-* Remove ordered keys / unordered keys from public interface.  Always on for ModelSerializer, always off for DumpDataSerializer.
-* Fixup KeyWithMetadata - use SortedDictWithMetadata instead.
 * indent option for xml
 
 Nice to have:
@@ -72,6 +70,8 @@ Done:
 * Handle multiple model inheritance correctly for ModelSerializer and DumpDataSerializer.
 * The base `Field` instances need to be copied on `Serializer` instatiation.  Right now there's some shared state that needs to disappear.
 * Add natural key support to DumpDataSerializer.
+* Remove ordered keys / unordered keys from public interface.  Always on for ModelSerializer, always off for DumpDataSerializer.
+* Fixup KeyWithMetadata - use SortedDictWithMetadata instead.
 
 
 Installation
